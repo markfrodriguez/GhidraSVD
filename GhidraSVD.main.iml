@@ -1,0 +1,1462 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<module external.linked.project.id="GhidraSVD:main" external.linked.project.path="$MODULE_DIR$" external.root.project.path="$MODULE_DIR$" external.system.id="GRADLE" external.system.module.group="" external.system.module.type="sourceSet" external.system.module.version="unspecified" type="JAVA_MODULE" version="4">
+  <component name="NewModuleRootManager" LANGUAGE_LEVEL="JDK_17">
+    <output url="file://$MODULE_DIR$/build/classes/java/main" />
+    <exclude-output />
+    <content url="file://$MODULE_DIR$/src/main">
+      <sourceFolder url="file://$MODULE_DIR$/src/main/java" isTestSource="false" />
+    </content>
+    <orderEntry type="inheritedJdk" />
+    <orderEntry type="sourceFolder" forTests="false" />
+    <orderEntry type="module-library" scope="PROVIDED">
+      <library name="Gradle: jna-5.14.0.jar">
+        <CLASSES>
+          <root url="jar://$USER_HOME$/ghidra/ghidra_11.3.1/Ghidra/Framework/Pty/lib/jna-5.14.0.jar!/" />
+        </CLASSES>
+        <JAVADOC />
+        <SOURCES />
+      </library>
+    </orderEntry>
+    <orderEntry type="module-library" scope="PROVIDED">
+      <library name="Gradle: Pty.jar">
+        <CLASSES>
+          <root url="jar://$USER_HOME$/ghidra/ghidra_11.3.1/Ghidra/Framework/Pty/lib/Pty.jar!/" />
+        </CLASSES>
+        <JAVADOC />
+        <SOURCES />
+      </library>
+    </orderEntry>
+    <orderEntry type="module-library" scope="PROVIDED">
+      <library name="Gradle: jna-platform-5.14.0.jar">
+        <CLASSES>
+          <root url="jar://$USER_HOME$/ghidra/ghidra_11.3.1/Ghidra/Framework/Pty/lib/jna-platform-5.14.0.jar!/" />
+        </CLASSES>
+        <JAVADOC />
+        <SOURCES />
+      </library>
+    </orderEntry>
+    <orderEntry type="module-library" scope="PROVIDED">
+      <library name="Gradle: asm-util-9.7.1.jar">
+        <CLASSES>
+          <root url="jar://$USER_HOME$/ghidra/ghidra_11.3.1/Ghidra/Framework/Emulation/lib/asm-util-9.7.1.jar!/" />
+        </CLASSES>
+        <JAVADOC />
+        <SOURCES />
+      </library>
+    </orderEntry>
+    <orderEntry type="module-library" scope="PROVIDED">
+      <library name="Gradle: asm-9.7.1.jar">
+        <CLASSES>
+          <root url="jar://$USER_HOME$/ghidra/ghidra_11.3.1/Ghidra/Framework/Emulation/lib/asm-9.7.1.jar!/" />
+        </CLASSES>
+        <JAVADOC />
+        <SOURCES />
+      </library>
+    </orderEntry>
+    <orderEntry type="module-library" scope="PROVIDED">
+      <library name="Gradle: asm-analysis-9.7.1.jar">
+        <CLASSES>
+          <root url="jar://$USER_HOME$/ghidra/ghidra_11.3.1/Ghidra/Framework/Emulation/lib/asm-analysis-9.7.1.jar!/" />
+        </CLASSES>
+        <JAVADOC />
+        <SOURCES />
+      </library>
+    </orderEntry>
+    <orderEntry type="module-library" scope="PROVIDED">
+      <library name="Gradle: asm-tree-9.7.1.jar">
+        <CLASSES>
+          <root url="jar://$USER_HOME$/ghidra/ghidra_11.3.1/Ghidra/Framework/Emulation/lib/asm-tree-9.7.1.jar!/" />
+        </CLASSES>
+        <JAVADOC />
+        <SOURCES />
+      </library>
+    </orderEntry>
+    <orderEntry type="module-library" scope="PROVIDED">
+      <library name="Gradle: Emulation.jar">
+        <CLASSES>
+          <root url="jar://$USER_HOME$/ghidra/ghidra_11.3.1/Ghidra/Framework/Emulation/lib/Emulation.jar!/" />
+        </CLASSES>
+        <JAVADOC />
+        <SOURCES />
+      </library>
+    </orderEntry>
+    <orderEntry type="module-library" scope="PROVIDED">
+      <library name="Gradle: asm-commons-9.7.1.jar">
+        <CLASSES>
+          <root url="jar://$USER_HOME$/ghidra/ghidra_11.3.1/Ghidra/Framework/Emulation/lib/asm-commons-9.7.1.jar!/" />
+        </CLASSES>
+        <JAVADOC />
+        <SOURCES />
+      </library>
+    </orderEntry>
+    <orderEntry type="module-library" scope="PROVIDED">
+      <library name="Gradle: isorelax-20050913.jar">
+        <CLASSES>
+          <root url="jar://$USER_HOME$/ghidra/ghidra_11.3.1/Ghidra/Framework/SoftwareModeling/lib/isorelax-20050913.jar!/" />
+        </CLASSES>
+        <JAVADOC />
+        <SOURCES />
+      </library>
+    </orderEntry>
+    <orderEntry type="module-library" scope="PROVIDED">
+      <library name="Gradle: xsdlib-20050913.jar">
+        <CLASSES>
+          <root url="jar://$USER_HOME$/ghidra/ghidra_11.3.1/Ghidra/Framework/SoftwareModeling/lib/xsdlib-20050913.jar!/" />
+        </CLASSES>
+        <JAVADOC />
+        <SOURCES />
+      </library>
+    </orderEntry>
+    <orderEntry type="module-library" scope="PROVIDED">
+      <library name="Gradle: antlr-runtime-3.5.2.jar">
+        <CLASSES>
+          <root url="jar://$USER_HOME$/ghidra/ghidra_11.3.1/Ghidra/Framework/SoftwareModeling/lib/antlr-runtime-3.5.2.jar!/" />
+        </CLASSES>
+        <JAVADOC />
+        <SOURCES />
+      </library>
+    </orderEntry>
+    <orderEntry type="module-library" scope="PROVIDED">
+      <library name="Gradle: msv-20050913.jar">
+        <CLASSES>
+          <root url="jar://$USER_HOME$/ghidra/ghidra_11.3.1/Ghidra/Framework/SoftwareModeling/lib/msv-20050913.jar!/" />
+        </CLASSES>
+        <JAVADOC />
+        <SOURCES />
+      </library>
+    </orderEntry>
+    <orderEntry type="module-library" scope="PROVIDED">
+      <library name="Gradle: SoftwareModeling.jar">
+        <CLASSES>
+          <root url="jar://$USER_HOME$/ghidra/ghidra_11.3.1/Ghidra/Framework/SoftwareModeling/lib/SoftwareModeling.jar!/" />
+        </CLASSES>
+        <JAVADOC />
+        <SOURCES />
+      </library>
+    </orderEntry>
+    <orderEntry type="module-library" scope="PROVIDED">
+      <library name="Gradle: relaxngDatatype-20050913.jar">
+        <CLASSES>
+          <root url="jar://$USER_HOME$/ghidra/ghidra_11.3.1/Ghidra/Framework/SoftwareModeling/lib/relaxngDatatype-20050913.jar!/" />
+        </CLASSES>
+        <JAVADOC />
+        <SOURCES />
+      </library>
+    </orderEntry>
+    <orderEntry type="module-library" scope="PROVIDED">
+      <library name="Gradle: jung-algorithms-2.1.1.jar">
+        <CLASSES>
+          <root url="jar://$USER_HOME$/ghidra/ghidra_11.3.1/Ghidra/Framework/Graph/lib/jung-algorithms-2.1.1.jar!/" />
+        </CLASSES>
+        <JAVADOC />
+        <SOURCES />
+      </library>
+    </orderEntry>
+    <orderEntry type="module-library" scope="PROVIDED">
+      <library name="Gradle: jung-visualization-2.1.1.jar">
+        <CLASSES>
+          <root url="jar://$USER_HOME$/ghidra/ghidra_11.3.1/Ghidra/Framework/Graph/lib/jung-visualization-2.1.1.jar!/" />
+        </CLASSES>
+        <JAVADOC />
+        <SOURCES />
+      </library>
+    </orderEntry>
+    <orderEntry type="module-library" scope="PROVIDED">
+      <library name="Gradle: jgrapht-io-1.5.1.jar">
+        <CLASSES>
+          <root url="jar://$USER_HOME$/ghidra/ghidra_11.3.1/Ghidra/Framework/Graph/lib/jgrapht-io-1.5.1.jar!/" />
+        </CLASSES>
+        <JAVADOC />
+        <SOURCES />
+      </library>
+    </orderEntry>
+    <orderEntry type="module-library" scope="PROVIDED">
+      <library name="Gradle: jung-api-2.1.1.jar">
+        <CLASSES>
+          <root url="jar://$USER_HOME$/ghidra/ghidra_11.3.1/Ghidra/Framework/Graph/lib/jung-api-2.1.1.jar!/" />
+        </CLASSES>
+        <JAVADOC />
+        <SOURCES />
+      </library>
+    </orderEntry>
+    <orderEntry type="module-library" scope="PROVIDED">
+      <library name="Gradle: jgrapht-core-1.5.1.jar">
+        <CLASSES>
+          <root url="jar://$USER_HOME$/ghidra/ghidra_11.3.1/Ghidra/Framework/Graph/lib/jgrapht-core-1.5.1.jar!/" />
+        </CLASSES>
+        <JAVADOC />
+        <SOURCES />
+      </library>
+    </orderEntry>
+    <orderEntry type="module-library" scope="PROVIDED">
+      <library name="Gradle: Graph.jar">
+        <CLASSES>
+          <root url="jar://$USER_HOME$/ghidra/ghidra_11.3.1/Ghidra/Framework/Graph/lib/Graph.jar!/" />
+        </CLASSES>
+        <JAVADOC />
+        <SOURCES />
+      </library>
+    </orderEntry>
+    <orderEntry type="module-library" scope="PROVIDED">
+      <library name="Gradle: jung-graph-impl-2.1.1.jar">
+        <CLASSES>
+          <root url="jar://$USER_HOME$/ghidra/ghidra_11.3.1/Ghidra/Framework/Graph/lib/jung-graph-impl-2.1.1.jar!/" />
+        </CLASSES>
+        <JAVADOC />
+        <SOURCES />
+      </library>
+    </orderEntry>
+    <orderEntry type="module-library" scope="PROVIDED">
+      <library name="Gradle: FileSystem.jar">
+        <CLASSES>
+          <root url="jar://$USER_HOME$/ghidra/ghidra_11.3.1/Ghidra/Framework/FileSystem/lib/FileSystem.jar!/" />
+        </CLASSES>
+        <JAVADOC />
+        <SOURCES />
+      </library>
+    </orderEntry>
+    <orderEntry type="module-library" scope="PROVIDED">
+      <library name="Gradle: Project.jar">
+        <CLASSES>
+          <root url="jar://$USER_HOME$/ghidra/ghidra_11.3.1/Ghidra/Framework/Project/lib/Project.jar!/" />
+        </CLASSES>
+        <JAVADOC />
+        <SOURCES />
+      </library>
+    </orderEntry>
+    <orderEntry type="module-library" scope="PROVIDED">
+      <library name="Gradle: xz-1.9.jar">
+        <CLASSES>
+          <root url="jar://$USER_HOME$/ghidra/ghidra_11.3.1/Ghidra/Framework/Project/lib/xz-1.9.jar!/" />
+        </CLASSES>
+        <JAVADOC />
+        <SOURCES />
+      </library>
+    </orderEntry>
+    <orderEntry type="module-library" scope="PROVIDED">
+      <library name="Gradle: Docking.jar">
+        <CLASSES>
+          <root url="jar://$USER_HOME$/ghidra/ghidra_11.3.1/Ghidra/Framework/Docking/lib/Docking.jar!/" />
+        </CLASSES>
+        <JAVADOC />
+        <SOURCES />
+      </library>
+    </orderEntry>
+    <orderEntry type="module-library" scope="PROVIDED">
+      <library name="Gradle: Gui.jar">
+        <CLASSES>
+          <root url="jar://$USER_HOME$/ghidra/ghidra_11.3.1/Ghidra/Framework/Gui/lib/Gui.jar!/" />
+        </CLASSES>
+        <JAVADOC />
+        <SOURCES />
+      </library>
+    </orderEntry>
+    <orderEntry type="module-library" scope="PROVIDED">
+      <library name="Gradle: flatlaf-3.5.4.jar">
+        <CLASSES>
+          <root url="jar://$USER_HOME$/ghidra/ghidra_11.3.1/Ghidra/Framework/Gui/lib/flatlaf-3.5.4.jar!/" />
+        </CLASSES>
+        <JAVADOC />
+        <SOURCES />
+      </library>
+    </orderEntry>
+    <orderEntry type="module-library" scope="PROVIDED">
+      <library name="Gradle: DB.jar">
+        <CLASSES>
+          <root url="jar://$USER_HOME$/ghidra/ghidra_11.3.1/Ghidra/Framework/DB/lib/DB.jar!/" />
+        </CLASSES>
+        <JAVADOC />
+        <SOURCES />
+      </library>
+    </orderEntry>
+    <orderEntry type="module-library" scope="PROVIDED">
+      <library name="Gradle: bcprov-jdk15on-1.69.jar">
+        <CLASSES>
+          <root url="jar://$USER_HOME$/ghidra/ghidra_11.3.1/Ghidra/Framework/Generic/lib/bcprov-jdk15on-1.69.jar!/" />
+        </CLASSES>
+        <JAVADOC />
+        <SOURCES />
+      </library>
+    </orderEntry>
+    <orderEntry type="module-library" scope="PROVIDED">
+      <library name="Gradle: jdom-legacy-1.1.3.jar">
+        <CLASSES>
+          <root url="jar://$USER_HOME$/ghidra/ghidra_11.3.1/Ghidra/Framework/Generic/lib/jdom-legacy-1.1.3.jar!/" />
+        </CLASSES>
+        <JAVADOC />
+        <SOURCES />
+      </library>
+    </orderEntry>
+    <orderEntry type="module-library" scope="PROVIDED">
+      <library name="Gradle: log4j-api-2.17.1.jar">
+        <CLASSES>
+          <root url="jar://$USER_HOME$/ghidra/ghidra_11.3.1/Ghidra/Framework/Generic/lib/log4j-api-2.17.1.jar!/" />
+        </CLASSES>
+        <JAVADOC />
+        <SOURCES />
+      </library>
+    </orderEntry>
+    <orderEntry type="module-library" scope="PROVIDED">
+      <library name="Gradle: commons-io-2.11.0.jar">
+        <CLASSES>
+          <root url="jar://$USER_HOME$/ghidra/ghidra_11.3.1/Ghidra/Framework/Generic/lib/commons-io-2.11.0.jar!/" />
+        </CLASSES>
+        <JAVADOC />
+        <SOURCES />
+      </library>
+    </orderEntry>
+    <orderEntry type="module-library" scope="PROVIDED">
+      <library name="Gradle: bcpkix-jdk15on-1.69.jar">
+        <CLASSES>
+          <root url="jar://$USER_HOME$/ghidra/ghidra_11.3.1/Ghidra/Framework/Generic/lib/bcpkix-jdk15on-1.69.jar!/" />
+        </CLASSES>
+        <JAVADOC />
+        <SOURCES />
+      </library>
+    </orderEntry>
+    <orderEntry type="module-library" scope="PROVIDED">
+      <library name="Gradle: bcutil-jdk15on-1.69.jar">
+        <CLASSES>
+          <root url="jar://$USER_HOME$/ghidra/ghidra_11.3.1/Ghidra/Framework/Generic/lib/bcutil-jdk15on-1.69.jar!/" />
+        </CLASSES>
+        <JAVADOC />
+        <SOURCES />
+      </library>
+    </orderEntry>
+    <orderEntry type="module-library" scope="PROVIDED">
+      <library name="Gradle: log4j-core-2.17.1.jar">
+        <CLASSES>
+          <root url="jar://$USER_HOME$/ghidra/ghidra_11.3.1/Ghidra/Framework/Generic/lib/log4j-core-2.17.1.jar!/" />
+        </CLASSES>
+        <JAVADOC />
+        <SOURCES />
+      </library>
+    </orderEntry>
+    <orderEntry type="module-library" scope="PROVIDED">
+      <library name="Gradle: gson-2.9.0.jar">
+        <CLASSES>
+          <root url="jar://$USER_HOME$/ghidra/ghidra_11.3.1/Ghidra/Framework/Generic/lib/gson-2.9.0.jar!/" />
+        </CLASSES>
+        <JAVADOC />
+        <SOURCES />
+      </library>
+    </orderEntry>
+    <orderEntry type="module-library" scope="PROVIDED">
+      <library name="Gradle: failureaccess-1.0.1.jar">
+        <CLASSES>
+          <root url="jar://$USER_HOME$/ghidra/ghidra_11.3.1/Ghidra/Framework/Generic/lib/failureaccess-1.0.1.jar!/" />
+        </CLASSES>
+        <JAVADOC />
+        <SOURCES />
+      </library>
+    </orderEntry>
+    <orderEntry type="module-library" scope="PROVIDED">
+      <library name="Gradle: commons-collections4-4.1.jar">
+        <CLASSES>
+          <root url="jar://$USER_HOME$/ghidra/ghidra_11.3.1/Ghidra/Framework/Generic/lib/commons-collections4-4.1.jar!/" />
+        </CLASSES>
+        <JAVADOC />
+        <SOURCES />
+      </library>
+    </orderEntry>
+    <orderEntry type="module-library" scope="PROVIDED">
+      <library name="Gradle: commons-compress-1.21.jar">
+        <CLASSES>
+          <root url="jar://$USER_HOME$/ghidra/ghidra_11.3.1/Ghidra/Framework/Generic/lib/commons-compress-1.21.jar!/" />
+        </CLASSES>
+        <JAVADOC />
+        <SOURCES />
+      </library>
+    </orderEntry>
+    <orderEntry type="module-library" scope="PROVIDED">
+      <library name="Gradle: Generic.jar">
+        <CLASSES>
+          <root url="jar://$USER_HOME$/ghidra/ghidra_11.3.1/Ghidra/Framework/Generic/lib/Generic.jar!/" />
+        </CLASSES>
+        <JAVADOC />
+        <SOURCES />
+      </library>
+    </orderEntry>
+    <orderEntry type="module-library" scope="PROVIDED">
+      <library name="Gradle: guava-32.1.3-jre.jar">
+        <CLASSES>
+          <root url="jar://$USER_HOME$/ghidra/ghidra_11.3.1/Ghidra/Framework/Generic/lib/guava-32.1.3-jre.jar!/" />
+        </CLASSES>
+        <JAVADOC />
+        <SOURCES />
+      </library>
+    </orderEntry>
+    <orderEntry type="module-library" scope="PROVIDED">
+      <library name="Gradle: commons-lang3-3.12.0.jar">
+        <CLASSES>
+          <root url="jar://$USER_HOME$/ghidra/ghidra_11.3.1/Ghidra/Framework/Generic/lib/commons-lang3-3.12.0.jar!/" />
+        </CLASSES>
+        <JAVADOC />
+        <SOURCES />
+      </library>
+    </orderEntry>
+    <orderEntry type="module-library" scope="PROVIDED">
+      <library name="Gradle: commons-text-1.10.0.jar">
+        <CLASSES>
+          <root url="jar://$USER_HOME$/ghidra/ghidra_11.3.1/Ghidra/Framework/Generic/lib/commons-text-1.10.0.jar!/" />
+        </CLASSES>
+        <JAVADOC />
+        <SOURCES />
+      </library>
+    </orderEntry>
+    <orderEntry type="module-library" scope="PROVIDED">
+      <library name="Gradle: Help.jar">
+        <CLASSES>
+          <root url="jar://$USER_HOME$/ghidra/ghidra_11.3.1/Ghidra/Framework/Help/lib/Help.jar!/" />
+        </CLASSES>
+        <JAVADOC />
+        <SOURCES />
+      </library>
+    </orderEntry>
+    <orderEntry type="module-library" scope="PROVIDED">
+      <library name="Gradle: javahelp-2.0.05.jar">
+        <CLASSES>
+          <root url="jar://$USER_HOME$/ghidra/ghidra_11.3.1/Ghidra/Framework/Help/lib/javahelp-2.0.05.jar!/" />
+        </CLASSES>
+        <JAVADOC />
+        <SOURCES />
+      </library>
+    </orderEntry>
+    <orderEntry type="module-library" scope="PROVIDED">
+      <library name="Gradle: timingframework-1.0.jar">
+        <CLASSES>
+          <root url="jar://$USER_HOME$/ghidra/ghidra_11.3.1/Ghidra/Framework/Help/lib/timingframework-1.0.jar!/" />
+        </CLASSES>
+        <JAVADOC />
+        <SOURCES />
+      </library>
+    </orderEntry>
+    <orderEntry type="module-library" scope="PROVIDED">
+      <library name="Gradle: Utility.jar">
+        <CLASSES>
+          <root url="jar://$USER_HOME$/ghidra/ghidra_11.3.1/Ghidra/Framework/Utility/lib/Utility.jar!/" />
+        </CLASSES>
+        <JAVADOC />
+        <SOURCES />
+      </library>
+    </orderEntry>
+    <orderEntry type="module-library" scope="PROVIDED">
+      <library name="Gradle: PyGhidra.jar">
+        <CLASSES>
+          <root url="jar://$USER_HOME$/ghidra/ghidra_11.3.1/Ghidra/Features/PyGhidra/lib/PyGhidra.jar!/" />
+        </CLASSES>
+        <JAVADOC />
+        <SOURCES />
+      </library>
+    </orderEntry>
+    <orderEntry type="module-library" scope="PROVIDED">
+      <library name="Gradle: dex-reader-2.4.24.jar">
+        <CLASSES>
+          <root url="jar://$USER_HOME$/ghidra/ghidra_11.3.1/Ghidra/Features/FileFormats/lib/dex-reader-2.4.24.jar!/" />
+        </CLASSES>
+        <JAVADOC />
+        <SOURCES />
+      </library>
+    </orderEntry>
+    <orderEntry type="module-library" scope="PROVIDED">
+      <library name="Gradle: dex-ir-2.4.24.jar">
+        <CLASSES>
+          <root url="jar://$USER_HOME$/ghidra/ghidra_11.3.1/Ghidra/Features/FileFormats/lib/dex-ir-2.4.24.jar!/" />
+        </CLASSES>
+        <JAVADOC />
+        <SOURCES />
+      </library>
+    </orderEntry>
+    <orderEntry type="module-library" scope="PROVIDED">
+      <library name="Gradle: dex-reader-api-2.4.24.jar">
+        <CLASSES>
+          <root url="jar://$USER_HOME$/ghidra/ghidra_11.3.1/Ghidra/Features/FileFormats/lib/dex-reader-api-2.4.24.jar!/" />
+        </CLASSES>
+        <JAVADOC />
+        <SOURCES />
+      </library>
+    </orderEntry>
+    <orderEntry type="module-library" scope="PROVIDED">
+      <library name="Gradle: util-2.5.2.jar">
+        <CLASSES>
+          <root url="jar://$USER_HOME$/ghidra/ghidra_11.3.1/Ghidra/Features/FileFormats/lib/util-2.5.2.jar!/" />
+        </CLASSES>
+        <JAVADOC />
+        <SOURCES />
+      </library>
+    </orderEntry>
+    <orderEntry type="module-library" scope="PROVIDED">
+      <library name="Gradle: sevenzipjbinding-all-platforms-16.02-2.01.jar">
+        <CLASSES>
+          <root url="jar://$USER_HOME$/ghidra/ghidra_11.3.1/Ghidra/Features/FileFormats/lib/sevenzipjbinding-all-platforms-16.02-2.01.jar!/" />
+        </CLASSES>
+        <JAVADOC />
+        <SOURCES />
+      </library>
+    </orderEntry>
+    <orderEntry type="module-library" scope="PROVIDED">
+      <library name="Gradle: sevenzipjbinding-16.02-2.01.jar">
+        <CLASSES>
+          <root url="jar://$USER_HOME$/ghidra/ghidra_11.3.1/Ghidra/Features/FileFormats/lib/sevenzipjbinding-16.02-2.01.jar!/" />
+        </CLASSES>
+        <JAVADOC />
+        <SOURCES />
+      </library>
+    </orderEntry>
+    <orderEntry type="module-library" scope="PROVIDED">
+      <library name="Gradle: baksmali-2.5.2.jar">
+        <CLASSES>
+          <root url="jar://$USER_HOME$/ghidra/ghidra_11.3.1/Ghidra/Features/FileFormats/lib/baksmali-2.5.2.jar!/" />
+        </CLASSES>
+        <JAVADOC />
+        <SOURCES />
+      </library>
+    </orderEntry>
+    <orderEntry type="module-library" scope="PROVIDED">
+      <library name="Gradle: dex-translator-2.4.24.jar">
+        <CLASSES>
+          <root url="jar://$USER_HOME$/ghidra/ghidra_11.3.1/Ghidra/Features/FileFormats/lib/dex-translator-2.4.24.jar!/" />
+        </CLASSES>
+        <JAVADOC />
+        <SOURCES />
+      </library>
+    </orderEntry>
+    <orderEntry type="module-library" scope="PROVIDED">
+      <library name="Gradle: FileFormats.jar">
+        <CLASSES>
+          <root url="jar://$USER_HOME$/ghidra/ghidra_11.3.1/Ghidra/Features/FileFormats/lib/FileFormats.jar!/" />
+        </CLASSES>
+        <JAVADOC />
+        <SOURCES />
+      </library>
+    </orderEntry>
+    <orderEntry type="module-library" scope="PROVIDED">
+      <library name="Gradle: AXMLPrinter2.jar">
+        <CLASSES>
+          <root url="jar://$USER_HOME$/ghidra/ghidra_11.3.1/Ghidra/Features/FileFormats/lib/AXMLPrinter2.jar!/" />
+        </CLASSES>
+        <JAVADOC />
+        <SOURCES />
+      </library>
+    </orderEntry>
+    <orderEntry type="module-library" scope="PROVIDED">
+      <library name="Gradle: dexlib2-2.5.2.jar">
+        <CLASSES>
+          <root url="jar://$USER_HOME$/ghidra/ghidra_11.3.1/Ghidra/Features/FileFormats/lib/dexlib2-2.5.2.jar!/" />
+        </CLASSES>
+        <JAVADOC />
+        <SOURCES />
+      </library>
+    </orderEntry>
+    <orderEntry type="module-library" scope="PROVIDED">
+      <library name="Gradle: FunctionID.jar">
+        <CLASSES>
+          <root url="jar://$USER_HOME$/ghidra/ghidra_11.3.1/Ghidra/Features/FunctionID/lib/FunctionID.jar!/" />
+        </CLASSES>
+        <JAVADOC />
+        <SOURCES />
+      </library>
+    </orderEntry>
+    <orderEntry type="module-library" scope="PROVIDED">
+      <library name="Gradle: java-sarif-2.1-modified.jar">
+        <CLASSES>
+          <root url="jar://$USER_HOME$/ghidra/ghidra_11.3.1/Ghidra/Features/Sarif/lib/java-sarif-2.1-modified.jar!/" />
+        </CLASSES>
+        <JAVADOC />
+        <SOURCES />
+      </library>
+    </orderEntry>
+    <orderEntry type="module-library" scope="PROVIDED">
+      <library name="Gradle: Sarif.jar">
+        <CLASSES>
+          <root url="jar://$USER_HOME$/ghidra/ghidra_11.3.1/Ghidra/Features/Sarif/lib/Sarif.jar!/" />
+        </CLASSES>
+        <JAVADOC />
+        <SOURCES />
+      </library>
+    </orderEntry>
+    <orderEntry type="module-library" scope="PROVIDED">
+      <library name="Gradle: GhidraServer.jar">
+        <CLASSES>
+          <root url="jar://$USER_HOME$/ghidra/ghidra_11.3.1/Ghidra/Features/GhidraServer/lib/GhidraServer.jar!/" />
+        </CLASSES>
+        <JAVADOC />
+        <SOURCES />
+      </library>
+    </orderEntry>
+    <orderEntry type="module-library" scope="PROVIDED">
+      <library name="Gradle: wrapperApp9.jar">
+        <CLASSES>
+          <root url="jar://$USER_HOME$/ghidra/ghidra_11.3.1/Ghidra/Features/GhidraServer/data/yajsw-stable-13.12/wrapperApp9.jar!/" />
+        </CLASSES>
+        <JAVADOC />
+        <SOURCES />
+      </library>
+    </orderEntry>
+    <orderEntry type="module-library" scope="PROVIDED">
+      <library name="Gradle: wrapperApp.jar">
+        <CLASSES>
+          <root url="jar://$USER_HOME$/ghidra/ghidra_11.3.1/Ghidra/Features/GhidraServer/data/yajsw-stable-13.12/wrapperApp.jar!/" />
+        </CLASSES>
+        <JAVADOC />
+        <SOURCES />
+      </library>
+    </orderEntry>
+    <orderEntry type="module-library" scope="PROVIDED">
+      <library name="Gradle: commons-logging-1.2.jar">
+        <CLASSES>
+          <root url="jar://$USER_HOME$/ghidra/ghidra_11.3.1/Ghidra/Features/GhidraServer/data/yajsw-stable-13.12/lib/core/commons/commons-logging-1.2.jar!/" />
+        </CLASSES>
+        <JAVADOC />
+        <SOURCES />
+      </library>
+    </orderEntry>
+    <orderEntry type="module-library" scope="PROVIDED">
+      <library name="Gradle: commons-io-2.11.0.jar">
+        <CLASSES>
+          <root url="jar://$USER_HOME$/ghidra/ghidra_11.3.1/Ghidra/Features/GhidraServer/data/yajsw-stable-13.12/lib/core/commons/commons-io-2.11.0.jar!/" />
+        </CLASSES>
+        <JAVADOC />
+        <SOURCES />
+      </library>
+    </orderEntry>
+    <orderEntry type="module-library" scope="PROVIDED">
+      <library name="Gradle: commons-cli-1.5.0.jar">
+        <CLASSES>
+          <root url="jar://$USER_HOME$/ghidra/ghidra_11.3.1/Ghidra/Features/GhidraServer/data/yajsw-stable-13.12/lib/core/commons/commons-cli-1.5.0.jar!/" />
+        </CLASSES>
+        <JAVADOC />
+        <SOURCES />
+      </library>
+    </orderEntry>
+    <orderEntry type="module-library" scope="PROVIDED">
+      <library name="Gradle: commons-vfs2-2.9.0.jar">
+        <CLASSES>
+          <root url="jar://$USER_HOME$/ghidra/ghidra_11.3.1/Ghidra/Features/GhidraServer/data/yajsw-stable-13.12/lib/core/commons/commons-vfs2-2.9.0.jar!/" />
+        </CLASSES>
+        <JAVADOC />
+        <SOURCES />
+      </library>
+    </orderEntry>
+    <orderEntry type="module-library" scope="PROVIDED">
+      <library name="Gradle: commons-collections-3.2.2.jar">
+        <CLASSES>
+          <root url="jar://$USER_HOME$/ghidra/ghidra_11.3.1/Ghidra/Features/GhidraServer/data/yajsw-stable-13.12/lib/core/commons/commons-collections-3.2.2.jar!/" />
+        </CLASSES>
+        <JAVADOC />
+        <SOURCES />
+      </library>
+    </orderEntry>
+    <orderEntry type="module-library" scope="PROVIDED">
+      <library name="Gradle: commons-configuration2-2.10.1.jar">
+        <CLASSES>
+          <root url="jar://$USER_HOME$/ghidra/ghidra_11.3.1/Ghidra/Features/GhidraServer/data/yajsw-stable-13.12/lib/core/commons/commons-configuration2-2.10.1.jar!/" />
+        </CLASSES>
+        <JAVADOC />
+        <SOURCES />
+      </library>
+    </orderEntry>
+    <orderEntry type="module-library" scope="PROVIDED">
+      <library name="Gradle: commons-lang-2.6.jar">
+        <CLASSES>
+          <root url="jar://$USER_HOME$/ghidra/ghidra_11.3.1/Ghidra/Features/GhidraServer/data/yajsw-stable-13.12/lib/core/commons/commons-lang-2.6.jar!/" />
+        </CLASSES>
+        <JAVADOC />
+        <SOURCES />
+      </library>
+    </orderEntry>
+    <orderEntry type="module-library" scope="PROVIDED">
+      <library name="Gradle: commons-lang3-3.12.0.jar">
+        <CLASSES>
+          <root url="jar://$USER_HOME$/ghidra/ghidra_11.3.1/Ghidra/Features/GhidraServer/data/yajsw-stable-13.12/lib/core/commons/commons-lang3-3.12.0.jar!/" />
+        </CLASSES>
+        <JAVADOC />
+        <SOURCES />
+      </library>
+    </orderEntry>
+    <orderEntry type="module-library" scope="PROVIDED">
+      <library name="Gradle: commons-text-1.10.0.jar">
+        <CLASSES>
+          <root url="jar://$USER_HOME$/ghidra/ghidra_11.3.1/Ghidra/Features/GhidraServer/data/yajsw-stable-13.12/lib/core/commons/commons-text-1.10.0.jar!/" />
+        </CLASSES>
+        <JAVADOC />
+        <SOURCES />
+      </library>
+    </orderEntry>
+    <orderEntry type="module-library" scope="PROVIDED">
+      <library name="Gradle: permit-reflect-0.4.jar">
+        <CLASSES>
+          <root url="jar://$USER_HOME$/ghidra/ghidra_11.3.1/Ghidra/Features/GhidraServer/data/yajsw-stable-13.12/lib/core/permit/permit-reflect-0.4.jar!/" />
+        </CLASSES>
+        <JAVADOC />
+        <SOURCES />
+      </library>
+    </orderEntry>
+    <orderEntry type="module-library" scope="PROVIDED">
+      <library name="Gradle: netty-codec-4.1.104.Final.jar">
+        <CLASSES>
+          <root url="jar://$USER_HOME$/ghidra/ghidra_11.3.1/Ghidra/Features/GhidraServer/data/yajsw-stable-13.12/lib/core/netty/netty-codec-4.1.104.Final.jar!/" />
+        </CLASSES>
+        <JAVADOC />
+        <SOURCES />
+      </library>
+    </orderEntry>
+    <orderEntry type="module-library" scope="PROVIDED">
+      <library name="Gradle: netty-resolver-4.1.104.Final.jar">
+        <CLASSES>
+          <root url="jar://$USER_HOME$/ghidra/ghidra_11.3.1/Ghidra/Features/GhidraServer/data/yajsw-stable-13.12/lib/core/netty/netty-resolver-4.1.104.Final.jar!/" />
+        </CLASSES>
+        <JAVADOC />
+        <SOURCES />
+      </library>
+    </orderEntry>
+    <orderEntry type="module-library" scope="PROVIDED">
+      <library name="Gradle: netty-handler-4.1.104.Final.jar">
+        <CLASSES>
+          <root url="jar://$USER_HOME$/ghidra/ghidra_11.3.1/Ghidra/Features/GhidraServer/data/yajsw-stable-13.12/lib/core/netty/netty-handler-4.1.104.Final.jar!/" />
+        </CLASSES>
+        <JAVADOC />
+        <SOURCES />
+      </library>
+    </orderEntry>
+    <orderEntry type="module-library" scope="PROVIDED">
+      <library name="Gradle: netty-buffer-4.1.104.Final.jar">
+        <CLASSES>
+          <root url="jar://$USER_HOME$/ghidra/ghidra_11.3.1/Ghidra/Features/GhidraServer/data/yajsw-stable-13.12/lib/core/netty/netty-buffer-4.1.104.Final.jar!/" />
+        </CLASSES>
+        <JAVADOC />
+        <SOURCES />
+      </library>
+    </orderEntry>
+    <orderEntry type="module-library" scope="PROVIDED">
+      <library name="Gradle: netty-common-4.1.104.Final.jar">
+        <CLASSES>
+          <root url="jar://$USER_HOME$/ghidra/ghidra_11.3.1/Ghidra/Features/GhidraServer/data/yajsw-stable-13.12/lib/core/netty/netty-common-4.1.104.Final.jar!/" />
+        </CLASSES>
+        <JAVADOC />
+        <SOURCES />
+      </library>
+    </orderEntry>
+    <orderEntry type="module-library" scope="PROVIDED">
+      <library name="Gradle: netty-transport-4.1.104.Final.jar">
+        <CLASSES>
+          <root url="jar://$USER_HOME$/ghidra/ghidra_11.3.1/Ghidra/Features/GhidraServer/data/yajsw-stable-13.12/lib/core/netty/netty-transport-4.1.104.Final.jar!/" />
+        </CLASSES>
+        <JAVADOC />
+        <SOURCES />
+      </library>
+    </orderEntry>
+    <orderEntry type="module-library" scope="PROVIDED">
+      <library name="Gradle: ahessian.jar">
+        <CLASSES>
+          <root url="jar://$USER_HOME$/ghidra/ghidra_11.3.1/Ghidra/Features/GhidraServer/data/yajsw-stable-13.12/lib/core/yajsw/ahessian.jar!/" />
+        </CLASSES>
+        <JAVADOC />
+        <SOURCES />
+      </library>
+    </orderEntry>
+    <orderEntry type="module-library" scope="PROVIDED">
+      <library name="Gradle: jna-5.12.1.jar">
+        <CLASSES>
+          <root url="jar://$USER_HOME$/ghidra/ghidra_11.3.1/Ghidra/Features/GhidraServer/data/yajsw-stable-13.12/lib/core/jna/jna-5.12.1.jar!/" />
+        </CLASSES>
+        <JAVADOC />
+        <SOURCES />
+      </library>
+    </orderEntry>
+    <orderEntry type="module-library" scope="PROVIDED">
+      <library name="Gradle: jna-platform-5.12.1.jar">
+        <CLASSES>
+          <root url="jar://$USER_HOME$/ghidra/ghidra_11.3.1/Ghidra/Features/GhidraServer/data/yajsw-stable-13.12/lib/core/jna/jna-platform-5.12.1.jar!/" />
+        </CLASSES>
+        <JAVADOC />
+        <SOURCES />
+      </library>
+    </orderEntry>
+    <orderEntry type="module-library" scope="PROVIDED">
+      <library name="Gradle: sigar-lib-1.6.4.jar">
+        <CLASSES>
+          <root url="jar://$USER_HOME$/ghidra/ghidra_11.3.1/Ghidra/Features/GhidraServer/data/yajsw-stable-13.12/lib/extended/sigar/sigar-lib-1.6.4.jar!/" />
+        </CLASSES>
+        <JAVADOC />
+        <SOURCES />
+      </library>
+    </orderEntry>
+    <orderEntry type="module-library" scope="PROVIDED">
+      <library name="Gradle: sigar-1.6.4.jar">
+        <CLASSES>
+          <root url="jar://$USER_HOME$/ghidra/ghidra_11.3.1/Ghidra/Features/GhidraServer/data/yajsw-stable-13.12/lib/extended/sigar/sigar-1.6.4.jar!/" />
+        </CLASSES>
+        <JAVADOC />
+        <SOURCES />
+      </library>
+    </orderEntry>
+    <orderEntry type="module-library" scope="PROVIDED">
+      <library name="Gradle: keystore.jar">
+        <CLASSES>
+          <root url="jar://$USER_HOME$/ghidra/ghidra_11.3.1/Ghidra/Features/GhidraServer/data/yajsw-stable-13.12/lib/extended/keystore/keystore.jar!/" />
+        </CLASSES>
+        <JAVADOC />
+        <SOURCES />
+      </library>
+    </orderEntry>
+    <orderEntry type="module-library" scope="PROVIDED">
+      <library name="Gradle: xercesImpl.jar">
+        <CLASSES>
+          <root url="jar://$USER_HOME$/ghidra/ghidra_11.3.1/Ghidra/Features/GhidraServer/data/yajsw-stable-13.12/lib/extended/vfs-webdav/xercesImpl.jar!/" />
+        </CLASSES>
+        <JAVADOC />
+        <SOURCES />
+      </library>
+    </orderEntry>
+    <orderEntry type="module-library" scope="PROVIDED">
+      <library name="Gradle: jackrabbit-webdav-2.21.20.jar">
+        <CLASSES>
+          <root url="jar://$USER_HOME$/ghidra/ghidra_11.3.1/Ghidra/Features/GhidraServer/data/yajsw-stable-13.12/lib/extended/vfs-webdav/jackrabbit-webdav-2.21.20.jar!/" />
+        </CLASSES>
+        <JAVADOC />
+        <SOURCES />
+      </library>
+    </orderEntry>
+    <orderEntry type="module-library" scope="PROVIDED">
+      <library name="Gradle: slf4j-simple-1.7.30.jar">
+        <CLASSES>
+          <root url="jar://$USER_HOME$/ghidra/ghidra_11.3.1/Ghidra/Features/GhidraServer/data/yajsw-stable-13.12/lib/extended/slf4j/slf4j-simple-1.7.30.jar!/" />
+        </CLASSES>
+        <JAVADOC />
+        <SOURCES />
+      </library>
+    </orderEntry>
+    <orderEntry type="module-library" scope="PROVIDED">
+      <library name="Gradle: slf4j-api-1.7.30.jar">
+        <CLASSES>
+          <root url="jar://$USER_HOME$/ghidra/ghidra_11.3.1/Ghidra/Features/GhidraServer/data/yajsw-stable-13.12/lib/extended/slf4j/slf4j-api-1.7.30.jar!/" />
+        </CLASSES>
+        <JAVADOC />
+        <SOURCES />
+      </library>
+    </orderEntry>
+    <orderEntry type="module-library" scope="PROVIDED">
+      <library name="Gradle: commons-codec-1.15.jar">
+        <CLASSES>
+          <root url="jar://$USER_HOME$/ghidra/ghidra_11.3.1/Ghidra/Features/GhidraServer/data/yajsw-stable-13.12/lib/extended/commons/commons-codec-1.15.jar!/" />
+        </CLASSES>
+        <JAVADOC />
+        <SOURCES />
+      </library>
+    </orderEntry>
+    <orderEntry type="module-library" scope="PROVIDED">
+      <library name="Gradle: httpclient-4.5.13.jar">
+        <CLASSES>
+          <root url="jar://$USER_HOME$/ghidra/ghidra_11.3.1/Ghidra/Features/GhidraServer/data/yajsw-stable-13.12/lib/extended/commons/httpclient-4.5.13.jar!/" />
+        </CLASSES>
+        <JAVADOC />
+        <SOURCES />
+      </library>
+    </orderEntry>
+    <orderEntry type="module-library" scope="PROVIDED">
+      <library name="Gradle: commons-net-3.2.jar">
+        <CLASSES>
+          <root url="jar://$USER_HOME$/ghidra/ghidra_11.3.1/Ghidra/Features/GhidraServer/data/yajsw-stable-13.12/lib/extended/commons/commons-net-3.2.jar!/" />
+        </CLASSES>
+        <JAVADOC />
+        <SOURCES />
+      </library>
+    </orderEntry>
+    <orderEntry type="module-library" scope="PROVIDED">
+      <library name="Gradle: commons-beanutils-1.9.4.jar">
+        <CLASSES>
+          <root url="jar://$USER_HOME$/ghidra/ghidra_11.3.1/Ghidra/Features/GhidraServer/data/yajsw-stable-13.12/lib/extended/glazedlists/commons-beanutils-1.9.4.jar!/" />
+        </CLASSES>
+        <JAVADOC />
+        <SOURCES />
+      </library>
+    </orderEntry>
+    <orderEntry type="module-library" scope="PROVIDED">
+      <library name="Gradle: glazedlists-1.10.0_java16.jar">
+        <CLASSES>
+          <root url="jar://$USER_HOME$/ghidra/ghidra_11.3.1/Ghidra/Features/GhidraServer/data/yajsw-stable-13.12/lib/extended/glazedlists/glazedlists-1.10.0_java16.jar!/" />
+        </CLASSES>
+        <JAVADOC />
+        <SOURCES />
+      </library>
+    </orderEntry>
+    <orderEntry type="module-library" scope="PROVIDED">
+      <library name="Gradle: jackson-core-2.11.3.jar">
+        <CLASSES>
+          <root url="jar://$USER_HOME$/ghidra/ghidra_11.3.1/Ghidra/Features/GhidraServer/data/yajsw-stable-13.12/lib/extended/vfs-dbx/jackson-core-2.11.3.jar!/" />
+        </CLASSES>
+        <JAVADOC />
+        <SOURCES />
+      </library>
+    </orderEntry>
+    <orderEntry type="module-library" scope="PROVIDED">
+      <library name="Gradle: vfs-dbx-00.02.jar">
+        <CLASSES>
+          <root url="jar://$USER_HOME$/ghidra/ghidra_11.3.1/Ghidra/Features/GhidraServer/data/yajsw-stable-13.12/lib/extended/vfs-dbx/vfs-dbx-00.02.jar!/" />
+        </CLASSES>
+        <JAVADOC />
+        <SOURCES />
+      </library>
+    </orderEntry>
+    <orderEntry type="module-library" scope="PROVIDED">
+      <library name="Gradle: dropbox-core-sdk-1.7.7.jar">
+        <CLASSES>
+          <root url="jar://$USER_HOME$/ghidra/ghidra_11.3.1/Ghidra/Features/GhidraServer/data/yajsw-stable-13.12/lib/extended/vfs-dbx/dropbox-core-sdk-1.7.7.jar!/" />
+        </CLASSES>
+        <JAVADOC />
+        <SOURCES />
+      </library>
+    </orderEntry>
+    <orderEntry type="module-library" scope="PROVIDED">
+      <library name="Gradle: automaton-1.11.jar">
+        <CLASSES>
+          <root url="jar://$USER_HOME$/ghidra/ghidra_11.3.1/Ghidra/Features/GhidraServer/data/yajsw-stable-13.12/lib/extended/regex/automaton-1.11.jar!/" />
+        </CLASSES>
+        <JAVADOC />
+        <SOURCES />
+      </library>
+    </orderEntry>
+    <orderEntry type="module-library" scope="PROVIDED">
+      <library name="Gradle: velocity-engine-core-2.3.jar">
+        <CLASSES>
+          <root url="jar://$USER_HOME$/ghidra/ghidra_11.3.1/Ghidra/Features/GhidraServer/data/yajsw-stable-13.12/lib/extended/velocity/velocity-engine-core-2.3.jar!/" />
+        </CLASSES>
+        <JAVADOC />
+        <SOURCES />
+      </library>
+    </orderEntry>
+    <orderEntry type="module-library" scope="PROVIDED">
+      <library name="Gradle: formsrt.jar">
+        <CLASSES>
+          <root url="jar://$USER_HOME$/ghidra/ghidra_11.3.1/Ghidra/Features/GhidraServer/data/yajsw-stable-13.12/lib/extended/abeille/formsrt.jar!/" />
+        </CLASSES>
+        <JAVADOC />
+        <SOURCES />
+      </library>
+    </orderEntry>
+    <orderEntry type="module-library" scope="PROVIDED">
+      <library name="Gradle: forms-1.2.0.jar">
+        <CLASSES>
+          <root url="jar://$USER_HOME$/ghidra/ghidra_11.3.1/Ghidra/Features/GhidraServer/data/yajsw-stable-13.12/lib/extended/jgoodies/forms-1.2.0.jar!/" />
+        </CLASSES>
+        <JAVADOC />
+        <SOURCES />
+      </library>
+    </orderEntry>
+    <orderEntry type="module-library" scope="PROVIDED">
+      <library name="Gradle: srvmgr.jar">
+        <CLASSES>
+          <root url="jar://$USER_HOME$/ghidra/ghidra_11.3.1/Ghidra/Features/GhidraServer/data/yajsw-stable-13.12/lib/extended/yajsw/srvmgr.jar!/" />
+        </CLASSES>
+        <JAVADOC />
+        <SOURCES />
+      </library>
+    </orderEntry>
+    <orderEntry type="module-library" scope="PROVIDED">
+      <library name="Gradle: hessian4.jar">
+        <CLASSES>
+          <root url="jar://$USER_HOME$/ghidra/ghidra_11.3.1/Ghidra/Features/GhidraServer/data/yajsw-stable-13.12/lib/extended/yajsw/hessian4.jar!/" />
+        </CLASSES>
+        <JAVADOC />
+        <SOURCES />
+      </library>
+    </orderEntry>
+    <orderEntry type="module-library" scope="PROVIDED">
+      <library name="Gradle: groovy-patch.jar">
+        <CLASSES>
+          <root url="jar://$USER_HOME$/ghidra/ghidra_11.3.1/Ghidra/Features/GhidraServer/data/yajsw-stable-13.12/lib/extended/groovy/groovy-patch.jar!/" />
+        </CLASSES>
+        <JAVADOC />
+        <SOURCES />
+      </library>
+    </orderEntry>
+    <orderEntry type="module-library" scope="PROVIDED">
+      <library name="Gradle: groovy-4.0.12.jar">
+        <CLASSES>
+          <root url="jar://$USER_HOME$/ghidra/ghidra_11.3.1/Ghidra/Features/GhidraServer/data/yajsw-stable-13.12/lib/extended/groovy/groovy-4.0.12.jar!/" />
+        </CLASSES>
+        <JAVADOC />
+        <SOURCES />
+      </library>
+    </orderEntry>
+    <orderEntry type="module-library" scope="PROVIDED">
+      <library name="Gradle: groovy-patch9.jar">
+        <CLASSES>
+          <root url="jar://$USER_HOME$/ghidra/ghidra_11.3.1/Ghidra/Features/GhidraServer/data/yajsw-stable-13.12/lib/extended/groovy/groovy-patch9.jar!/" />
+        </CLASSES>
+        <JAVADOC />
+        <SOURCES />
+      </library>
+    </orderEntry>
+    <orderEntry type="module-library" scope="PROVIDED">
+      <library name="Gradle: prevayler-core-2.6.jar">
+        <CLASSES>
+          <root url="jar://$USER_HOME$/ghidra/ghidra_11.3.1/Ghidra/Features/GhidraServer/data/yajsw-stable-13.12/lib/extended/cron/prevayler-core-2.6.jar!/" />
+        </CLASSES>
+        <JAVADOC />
+        <SOURCES />
+      </library>
+    </orderEntry>
+    <orderEntry type="module-library" scope="PROVIDED">
+      <library name="Gradle: prevayler-factory-2.6.jar">
+        <CLASSES>
+          <root url="jar://$USER_HOME$/ghidra/ghidra_11.3.1/Ghidra/Features/GhidraServer/data/yajsw-stable-13.12/lib/extended/cron/prevayler-factory-2.6.jar!/" />
+        </CLASSES>
+        <JAVADOC />
+        <SOURCES />
+      </library>
+    </orderEntry>
+    <orderEntry type="module-library" scope="PROVIDED">
+      <library name="Gradle: joda-time-2.7.jar">
+        <CLASSES>
+          <root url="jar://$USER_HOME$/ghidra/ghidra_11.3.1/Ghidra/Features/GhidraServer/data/yajsw-stable-13.12/lib/extended/cron/joda-time-2.7.jar!/" />
+        </CLASSES>
+        <JAVADOC />
+        <SOURCES />
+      </library>
+    </orderEntry>
+    <orderEntry type="module-library" scope="PROVIDED">
+      <library name="Gradle: yacron4j-00.03.jar">
+        <CLASSES>
+          <root url="jar://$USER_HOME$/ghidra/ghidra_11.3.1/Ghidra/Features/GhidraServer/data/yajsw-stable-13.12/lib/extended/cron/yacron4j-00.03.jar!/" />
+        </CLASSES>
+        <JAVADOC />
+        <SOURCES />
+      </library>
+    </orderEntry>
+    <orderEntry type="module-library" scope="PROVIDED">
+      <library name="Gradle: wrapper.jar">
+        <CLASSES>
+          <root url="jar://$USER_HOME$/ghidra/ghidra_11.3.1/Ghidra/Features/GhidraServer/data/yajsw-stable-13.12/wrapper.jar!/" />
+        </CLASSES>
+        <JAVADOC />
+        <SOURCES />
+      </library>
+    </orderEntry>
+    <orderEntry type="module-library" scope="PROVIDED">
+      <library name="Gradle: BSimFeatureVisualizer.jar">
+        <CLASSES>
+          <root url="jar://$USER_HOME$/ghidra/ghidra_11.3.1/Ghidra/Features/BSimFeatureVisualizer/lib/BSimFeatureVisualizer.jar!/" />
+        </CLASSES>
+        <JAVADOC />
+        <SOURCES />
+      </library>
+    </orderEntry>
+    <orderEntry type="module-library" scope="PROVIDED">
+      <library name="Gradle: commons-logging-1.2.jar">
+        <CLASSES>
+          <root url="jar://$USER_HOME$/ghidra/ghidra_11.3.1/Ghidra/Features/BSim/lib/commons-logging-1.2.jar!/" />
+        </CLASSES>
+        <JAVADOC />
+        <SOURCES />
+      </library>
+    </orderEntry>
+    <orderEntry type="module-library" scope="PROVIDED">
+      <library name="Gradle: postgresql-42.7.3.jar">
+        <CLASSES>
+          <root url="jar://$USER_HOME$/ghidra/ghidra_11.3.1/Ghidra/Features/BSim/lib/postgresql-42.7.3.jar!/" />
+        </CLASSES>
+        <JAVADOC />
+        <SOURCES />
+      </library>
+    </orderEntry>
+    <orderEntry type="module-library" scope="PROVIDED">
+      <library name="Gradle: BSim.jar">
+        <CLASSES>
+          <root url="jar://$USER_HOME$/ghidra/ghidra_11.3.1/Ghidra/Features/BSim/lib/BSim.jar!/" />
+        </CLASSES>
+        <JAVADOC />
+        <SOURCES />
+      </library>
+    </orderEntry>
+    <orderEntry type="module-library" scope="PROVIDED">
+      <library name="Gradle: commons-pool2-2.11.1.jar">
+        <CLASSES>
+          <root url="jar://$USER_HOME$/ghidra/ghidra_11.3.1/Ghidra/Features/BSim/lib/commons-pool2-2.11.1.jar!/" />
+        </CLASSES>
+        <JAVADOC />
+        <SOURCES />
+      </library>
+    </orderEntry>
+    <orderEntry type="module-library" scope="PROVIDED">
+      <library name="Gradle: h2-2.2.220.jar">
+        <CLASSES>
+          <root url="jar://$USER_HOME$/ghidra/ghidra_11.3.1/Ghidra/Features/BSim/lib/h2-2.2.220.jar!/" />
+        </CLASSES>
+        <JAVADOC />
+        <SOURCES />
+      </library>
+    </orderEntry>
+    <orderEntry type="module-library" scope="PROVIDED">
+      <library name="Gradle: commons-dbcp2-2.9.0.jar">
+        <CLASSES>
+          <root url="jar://$USER_HOME$/ghidra/ghidra_11.3.1/Ghidra/Features/BSim/lib/commons-dbcp2-2.9.0.jar!/" />
+        </CLASSES>
+        <JAVADOC />
+        <SOURCES />
+      </library>
+    </orderEntry>
+    <orderEntry type="module-library" scope="PROVIDED">
+      <library name="Gradle: CodeCompare.jar">
+        <CLASSES>
+          <root url="jar://$USER_HOME$/ghidra/ghidra_11.3.1/Ghidra/Features/CodeCompare/lib/CodeCompare.jar!/" />
+        </CLASSES>
+        <JAVADOC />
+        <SOURCES />
+      </library>
+    </orderEntry>
+    <orderEntry type="module-library" scope="PROVIDED">
+      <library name="Gradle: GhidraGo.jar">
+        <CLASSES>
+          <root url="jar://$USER_HOME$/ghidra/ghidra_11.3.1/Ghidra/Features/GhidraGo/lib/GhidraGo.jar!/" />
+        </CLASSES>
+        <JAVADOC />
+        <SOURCES />
+      </library>
+    </orderEntry>
+    <orderEntry type="module-library" scope="PROVIDED">
+      <library name="Gradle: SystemEmulation.jar">
+        <CLASSES>
+          <root url="jar://$USER_HOME$/ghidra/ghidra_11.3.1/Ghidra/Features/SystemEmulation/lib/SystemEmulation.jar!/" />
+        </CLASSES>
+        <JAVADOC />
+        <SOURCES />
+      </library>
+    </orderEntry>
+    <orderEntry type="module-library" scope="PROVIDED">
+      <library name="Gradle: GnuDemangler.jar">
+        <CLASSES>
+          <root url="jar://$USER_HOME$/ghidra/ghidra_11.3.1/Ghidra/Features/GnuDemangler/lib/GnuDemangler.jar!/" />
+        </CLASSES>
+        <JAVADOC />
+        <SOURCES />
+      </library>
+    </orderEntry>
+    <orderEntry type="module-library" scope="PROVIDED">
+      <library name="Gradle: MicrosoftDmang.jar">
+        <CLASSES>
+          <root url="jar://$USER_HOME$/ghidra/ghidra_11.3.1/Ghidra/Features/MicrosoftDmang/lib/MicrosoftDmang.jar!/" />
+        </CLASSES>
+        <JAVADOC />
+        <SOURCES />
+      </library>
+    </orderEntry>
+    <orderEntry type="module-library" scope="PROVIDED">
+      <library name="Gradle: ByteViewer.jar">
+        <CLASSES>
+          <root url="jar://$USER_HOME$/ghidra/ghidra_11.3.1/Ghidra/Features/ByteViewer/lib/ByteViewer.jar!/" />
+        </CLASSES>
+        <JAVADOC />
+        <SOURCES />
+      </library>
+    </orderEntry>
+    <orderEntry type="module-library" scope="PROVIDED">
+      <library name="Gradle: SourceCodeLookup.jar">
+        <CLASSES>
+          <root url="jar://$USER_HOME$/ghidra/ghidra_11.3.1/Ghidra/Features/SourceCodeLookup/lib/SourceCodeLookup.jar!/" />
+        </CLASSES>
+        <JAVADOC />
+        <SOURCES />
+      </library>
+    </orderEntry>
+    <orderEntry type="module-library" scope="PROVIDED">
+      <library name="Gradle: SwiftDemangler.jar">
+        <CLASSES>
+          <root url="jar://$USER_HOME$/ghidra/ghidra_11.3.1/Ghidra/Features/SwiftDemangler/lib/SwiftDemangler.jar!/" />
+        </CLASSES>
+        <JAVADOC />
+        <SOURCES />
+      </library>
+    </orderEntry>
+    <orderEntry type="module-library" scope="PROVIDED">
+      <library name="Gradle: VersionTracking.jar">
+        <CLASSES>
+          <root url="jar://$USER_HOME$/ghidra/ghidra_11.3.1/Ghidra/Features/VersionTracking/lib/VersionTracking.jar!/" />
+        </CLASSES>
+        <JAVADOC />
+        <SOURCES />
+      </library>
+    </orderEntry>
+    <orderEntry type="module-library" scope="PROVIDED">
+      <library name="Gradle: Decompiler.jar">
+        <CLASSES>
+          <root url="jar://$USER_HOME$/ghidra/ghidra_11.3.1/Ghidra/Features/Decompiler/lib/Decompiler.jar!/" />
+        </CLASSES>
+        <JAVADOC />
+        <SOURCES />
+      </library>
+    </orderEntry>
+    <orderEntry type="module-library" scope="PROVIDED">
+      <library name="Gradle: FunctionGraphDecompilerExtension.jar">
+        <CLASSES>
+          <root url="jar://$USER_HOME$/ghidra/ghidra_11.3.1/Ghidra/Features/FunctionGraphDecompilerExtension/lib/FunctionGraphDecompilerExtension.jar!/" />
+        </CLASSES>
+        <JAVADOC />
+        <SOURCES />
+      </library>
+    </orderEntry>
+    <orderEntry type="module-library" scope="PROVIDED">
+      <library name="Gradle: WildcardAssembler.jar">
+        <CLASSES>
+          <root url="jar://$USER_HOME$/ghidra/ghidra_11.3.1/Ghidra/Features/WildcardAssembler/lib/WildcardAssembler.jar!/" />
+        </CLASSES>
+        <JAVADOC />
+        <SOURCES />
+      </library>
+    </orderEntry>
+    <orderEntry type="module-library" scope="PROVIDED">
+      <library name="Gradle: Recognizers.jar">
+        <CLASSES>
+          <root url="jar://$USER_HOME$/ghidra/ghidra_11.3.1/Ghidra/Features/Recognizers/lib/Recognizers.jar!/" />
+        </CLASSES>
+        <JAVADOC />
+        <SOURCES />
+      </library>
+    </orderEntry>
+    <orderEntry type="module-library" scope="PROVIDED">
+      <library name="Gradle: DecompilerDependent.jar">
+        <CLASSES>
+          <root url="jar://$USER_HOME$/ghidra/ghidra_11.3.1/Ghidra/Features/DecompilerDependent/lib/DecompilerDependent.jar!/" />
+        </CLASSES>
+        <JAVADOC />
+        <SOURCES />
+      </library>
+    </orderEntry>
+    <orderEntry type="module-library" scope="PROVIDED">
+      <library name="Gradle: FunctionGraph.jar">
+        <CLASSES>
+          <root url="jar://$USER_HOME$/ghidra/ghidra_11.3.1/Ghidra/Features/FunctionGraph/lib/FunctionGraph.jar!/" />
+        </CLASSES>
+        <JAVADOC />
+        <SOURCES />
+      </library>
+    </orderEntry>
+    <orderEntry type="module-library" scope="PROVIDED">
+      <library name="Gradle: VersionTrackingBSim.jar">
+        <CLASSES>
+          <root url="jar://$USER_HOME$/ghidra/ghidra_11.3.1/Ghidra/Features/VersionTrackingBSim/lib/VersionTrackingBSim.jar!/" />
+        </CLASSES>
+        <JAVADOC />
+        <SOURCES />
+      </library>
+    </orderEntry>
+    <orderEntry type="module-library" scope="PROVIDED">
+      <library name="Gradle: MicrosoftDemangler.jar">
+        <CLASSES>
+          <root url="jar://$USER_HOME$/ghidra/ghidra_11.3.1/Ghidra/Features/MicrosoftDemangler/lib/MicrosoftDemangler.jar!/" />
+        </CLASSES>
+        <JAVADOC />
+        <SOURCES />
+      </library>
+    </orderEntry>
+    <orderEntry type="module-library" scope="PROVIDED">
+      <library name="Gradle: MicrosoftCodeAnalyzer.jar">
+        <CLASSES>
+          <root url="jar://$USER_HOME$/ghidra/ghidra_11.3.1/Ghidra/Features/MicrosoftCodeAnalyzer/lib/MicrosoftCodeAnalyzer.jar!/" />
+        </CLASSES>
+        <JAVADOC />
+        <SOURCES />
+      </library>
+    </orderEntry>
+    <orderEntry type="module-library" scope="PROVIDED">
+      <library name="Gradle: jython-standalone-2.7.4.jar">
+        <CLASSES>
+          <root url="jar://$USER_HOME$/ghidra/ghidra_11.3.1/Ghidra/Features/Jython/lib/jython-standalone-2.7.4.jar!/" />
+        </CLASSES>
+        <JAVADOC />
+        <SOURCES />
+      </library>
+    </orderEntry>
+    <orderEntry type="module-library" scope="PROVIDED">
+      <library name="Gradle: Jython.jar">
+        <CLASSES>
+          <root url="jar://$USER_HOME$/ghidra/ghidra_11.3.1/Ghidra/Features/Jython/lib/Jython.jar!/" />
+        </CLASSES>
+        <JAVADOC />
+        <SOURCES />
+      </library>
+    </orderEntry>
+    <orderEntry type="module-library" scope="PROVIDED">
+      <library name="Gradle: BytePatterns.jar">
+        <CLASSES>
+          <root url="jar://$USER_HOME$/ghidra/ghidra_11.3.1/Ghidra/Features/BytePatterns/lib/BytePatterns.jar!/" />
+        </CLASSES>
+        <JAVADOC />
+        <SOURCES />
+      </library>
+    </orderEntry>
+    <orderEntry type="module-library" scope="PROVIDED">
+      <library name="Gradle: DebugUtils.jar">
+        <CLASSES>
+          <root url="jar://$USER_HOME$/ghidra/ghidra_11.3.1/Ghidra/Features/DebugUtils/lib/DebugUtils.jar!/" />
+        </CLASSES>
+        <JAVADOC />
+        <SOURCES />
+      </library>
+    </orderEntry>
+    <orderEntry type="module-library" scope="PROVIDED">
+      <library name="Gradle: ProgramGraph.jar">
+        <CLASSES>
+          <root url="jar://$USER_HOME$/ghidra/ghidra_11.3.1/Ghidra/Features/ProgramGraph/lib/ProgramGraph.jar!/" />
+        </CLASSES>
+        <JAVADOC />
+        <SOURCES />
+      </library>
+    </orderEntry>
+    <orderEntry type="module-library" scope="PROVIDED">
+      <library name="Gradle: PDB.jar">
+        <CLASSES>
+          <root url="jar://$USER_HOME$/ghidra/ghidra_11.3.1/Ghidra/Features/PDB/lib/PDB.jar!/" />
+        </CLASSES>
+        <JAVADOC />
+        <SOURCES />
+      </library>
+    </orderEntry>
+    <orderEntry type="module-library" scope="PROVIDED">
+      <library name="Gradle: GraphFunctionCalls.jar">
+        <CLASSES>
+          <root url="jar://$USER_HOME$/ghidra/ghidra_11.3.1/Ghidra/Features/GraphFunctionCalls/lib/GraphFunctionCalls.jar!/" />
+        </CLASSES>
+        <JAVADOC />
+        <SOURCES />
+      </library>
+    </orderEntry>
+    <orderEntry type="module-library" scope="PROVIDED">
+      <library name="Gradle: phidias-0.3.7.jar">
+        <CLASSES>
+          <root url="jar://$USER_HOME$/ghidra/ghidra_11.3.1/Ghidra/Features/Base/lib/phidias-0.3.7.jar!/" />
+        </CLASSES>
+        <JAVADOC />
+        <SOURCES />
+      </library>
+    </orderEntry>
+    <orderEntry type="module-library" scope="PROVIDED">
+      <library name="Gradle: biz.aQute.bnd.util-7.0.0.jar">
+        <CLASSES>
+          <root url="jar://$USER_HOME$/ghidra/ghidra_11.3.1/Ghidra/Features/Base/lib/biz.aQute.bnd.util-7.0.0.jar!/" />
+        </CLASSES>
+        <JAVADOC />
+        <SOURCES />
+      </library>
+    </orderEntry>
+    <orderEntry type="module-library" scope="PROVIDED">
+      <library name="Gradle: slf4j-api-1.7.25.jar">
+        <CLASSES>
+          <root url="jar://$USER_HOME$/ghidra/ghidra_11.3.1/Ghidra/Features/Base/lib/slf4j-api-1.7.25.jar!/" />
+        </CLASSES>
+        <JAVADOC />
+        <SOURCES />
+      </library>
+    </orderEntry>
+    <orderEntry type="module-library" scope="PROVIDED">
+      <library name="Gradle: org.apache.felix.framework-7.0.5.jar">
+        <CLASSES>
+          <root url="jar://$USER_HOME$/ghidra/ghidra_11.3.1/Ghidra/Features/Base/lib/org.apache.felix.framework-7.0.5.jar!/" />
+        </CLASSES>
+        <JAVADOC />
+        <SOURCES />
+      </library>
+    </orderEntry>
+    <orderEntry type="module-library" scope="PROVIDED">
+      <library name="Gradle: Base.jar">
+        <CLASSES>
+          <root url="jar://$USER_HOME$/ghidra/ghidra_11.3.1/Ghidra/Features/Base/lib/Base.jar!/" />
+        </CLASSES>
+        <JAVADOC />
+        <SOURCES />
+      </library>
+    </orderEntry>
+    <orderEntry type="module-library" scope="PROVIDED">
+      <library name="Gradle: org.osgi.util.promise-1.3.0.jar">
+        <CLASSES>
+          <root url="jar://$USER_HOME$/ghidra/ghidra_11.3.1/Ghidra/Features/Base/lib/org.osgi.util.promise-1.3.0.jar!/" />
+        </CLASSES>
+        <JAVADOC />
+        <SOURCES />
+      </library>
+    </orderEntry>
+    <orderEntry type="module-library" scope="PROVIDED">
+      <library name="Gradle: biz.aQute.bndlib-7.0.0.jar">
+        <CLASSES>
+          <root url="jar://$USER_HOME$/ghidra/ghidra_11.3.1/Ghidra/Features/Base/lib/biz.aQute.bndlib-7.0.0.jar!/" />
+        </CLASSES>
+        <JAVADOC />
+        <SOURCES />
+      </library>
+    </orderEntry>
+    <orderEntry type="module-library" scope="PROVIDED">
+      <library name="Gradle: slf4j-nop-1.7.25.jar">
+        <CLASSES>
+          <root url="jar://$USER_HOME$/ghidra/ghidra_11.3.1/Ghidra/Features/Base/lib/slf4j-nop-1.7.25.jar!/" />
+        </CLASSES>
+        <JAVADOC />
+        <SOURCES />
+      </library>
+    </orderEntry>
+    <orderEntry type="module-library" scope="PROVIDED">
+      <library name="Gradle: jungrapht-visualization-1.4.jar">
+        <CLASSES>
+          <root url="jar://$USER_HOME$/ghidra/ghidra_11.3.1/Ghidra/Features/GraphServices/lib/jungrapht-visualization-1.4.jar!/" />
+        </CLASSES>
+        <JAVADOC />
+        <SOURCES />
+      </library>
+    </orderEntry>
+    <orderEntry type="module-library" scope="PROVIDED">
+      <library name="Gradle: jgrapht-io-1.5.1.jar">
+        <CLASSES>
+          <root url="jar://$USER_HOME$/ghidra/ghidra_11.3.1/Ghidra/Features/GraphServices/lib/jgrapht-io-1.5.1.jar!/" />
+        </CLASSES>
+        <JAVADOC />
+        <SOURCES />
+      </library>
+    </orderEntry>
+    <orderEntry type="module-library" scope="PROVIDED">
+      <library name="Gradle: jungrapht-layout-1.4.jar">
+        <CLASSES>
+          <root url="jar://$USER_HOME$/ghidra/ghidra_11.3.1/Ghidra/Features/GraphServices/lib/jungrapht-layout-1.4.jar!/" />
+        </CLASSES>
+        <JAVADOC />
+        <SOURCES />
+      </library>
+    </orderEntry>
+    <orderEntry type="module-library" scope="PROVIDED">
+      <library name="Gradle: jheaps-0.13.jar">
+        <CLASSES>
+          <root url="jar://$USER_HOME$/ghidra/ghidra_11.3.1/Ghidra/Features/GraphServices/lib/jheaps-0.13.jar!/" />
+        </CLASSES>
+        <JAVADOC />
+        <SOURCES />
+      </library>
+    </orderEntry>
+    <orderEntry type="module-library" scope="PROVIDED">
+      <library name="Gradle: jgrapht-core-1.5.1.jar">
+        <CLASSES>
+          <root url="jar://$USER_HOME$/ghidra/ghidra_11.3.1/Ghidra/Features/GraphServices/lib/jgrapht-core-1.5.1.jar!/" />
+        </CLASSES>
+        <JAVADOC />
+        <SOURCES />
+      </library>
+    </orderEntry>
+    <orderEntry type="module-library" scope="PROVIDED">
+      <library name="Gradle: GraphServices.jar">
+        <CLASSES>
+          <root url="jar://$USER_HOME$/ghidra/ghidra_11.3.1/Ghidra/Features/GraphServices/lib/GraphServices.jar!/" />
+        </CLASSES>
+        <JAVADOC />
+        <SOURCES />
+      </library>
+    </orderEntry>
+    <orderEntry type="module-library" scope="PROVIDED">
+      <library name="Gradle: ProgramDiff.jar">
+        <CLASSES>
+          <root url="jar://$USER_HOME$/ghidra/ghidra_11.3.1/Ghidra/Features/ProgramDiff/lib/ProgramDiff.jar!/" />
+        </CLASSES>
+        <JAVADOC />
+        <SOURCES />
+      </library>
+    </orderEntry>
+    <orderEntry type="library" name="Gradle: io.github.antoniovazquezblanco:svd-parser:v0.0.8" level="project" />
+  </component>
+</module>

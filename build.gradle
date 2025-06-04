@@ -1,56 +1,210 @@
-/* ###
- * IP: GHIDRA
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- * 
- *      http://www.apache.org/licenses/LICENSE-2.0
- * 
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-// Builds a Ghidra Extension for a given Ghidra installation.
-//
-// An absolute path to the Ghidra installation directory must be supplied either by setting the 
-// GHIDRA_INSTALL_DIR environment variable or Gradle project property:
-//
-//     > export GHIDRA_INSTALL_DIR=<Absolute path to Ghidra> 
-//     > gradle
-//
-//         or
-//
-//     > gradle -PGHIDRA_INSTALL_DIR=<Absolute path to Ghidra>
-//
-// Gradle should be invoked from the directory of the project to build.  Please see the
-// application.gradle.version property in <GHIDRA_INSTALL_DIR>/Ghidra/application.properties
-// for the correction version of Gradle to use for the Ghidra installation you specify.
-
-//----------------------START "DO NOT MODIFY" SECTION------------------------------
-def ghidraInstallDir
-
-if (System.env.GHIDRA_INSTALL_DIR) {
-	ghidraInstallDir = System.env.GHIDRA_INSTALL_DIR
-}
-else if (project.hasProperty("GHIDRA_INSTALL_DIR")) {
-	ghidraInstallDir = project.getProperty("GHIDRA_INSTALL_DIR")
+plugins {
+    id 'java'
+    id 'idea'
 }
 
-if (ghidraInstallDir) {
-	apply from: new File(ghidraInstallDir).getCanonicalPath() + "/support/buildExtension.gradle"
+ext.GHIDRA_INSTALL_DIR = file(System.getenv('GHIDRA_INSTALL_DIR') ?: '/opt/ghidra')
+
+if (!GHIDRA_INSTALL_DIR.exists()) {
+    throw new GradleException("GHIDRA_INSTALL_DIR is not set or does not exist: $GHIDRA_INSTALL_DIR")
 }
-else {
-	throw new GradleException("GHIDRA_INSTALL_DIR is not defined!")
+
+ext.GHIDRA_EXTENSIONS_DIR = file("/Users/macrod/Library/ghidra/ghidra_11.3.1_PUBLIC/Extensions")
+
+if (!GHIDRA_EXTENSIONS_DIR.exists()) {
+    GHIDRA_EXTENSIONS_DIR.mkdirs()
+    println "Created Ghidra extensions directory: ${GHIDRA_EXTENSIONS_DIR}"
 }
-//----------------------END "DO NOT MODIFY" SECTION-------------------------------
 
 repositories {
-	mavenCentral()
+    mavenCentral()
+    flatDir { dirs "${GHIDRA_INSTALL_DIR}/Ghidra/Framework", "${GHIDRA_INSTALL_DIR}/Ghidra/Features" }
 }
 
 dependencies {
-	implementation 'io.github.antoniovazquezblanco:svd-parser:v0.0.8'
+    compileOnly fileTree(dir: "${GHIDRA_INSTALL_DIR}/Ghidra/Framework", include: "**/*.jar")
+    compileOnly fileTree(dir: "${GHIDRA_INSTALL_DIR}/Ghidra/Features", include: "**/*.jar")
+    
+    implementation 'io.github.antoniovazquezblanco:svd-parser:v0.0.8'
+}
+
+compileJava {
+    sourceCompatibility = "17"
+    targetCompatibility = "17"
+}
+
+task buildSourceZip(type: Zip) {
+    from 'src'
+    archiveFileName = "${project.name}-src.zip"
+    destinationDirectory = file('build/tmp')
+}
+
+task buildExtension(type: Zip) {
+    dependsOn classes, jar, buildSourceZip
+    
+    // Create the root GhidraSVD directory structure
+    into(project.name) {
+        // Include main JAR in lib directory
+        from(jar) {
+            into 'lib'
+        }
+        
+        // Include SVD parser dependency JAR
+        from(configurations.runtimeClasspath) {
+            into 'lib'
+            include '**/svd-parser-*.jar'
+        }
+        
+        // Include source code ZIP in lib directory
+        from('build/tmp') {
+            into 'lib'
+            include "${project.name}-src.zip"
+        }
+        
+        // Include extension metadata files
+        from files('extension.properties', 'Module.manifest')
+        
+        // Include documentation
+        from files('README.md')
+        from('doc') {
+            into 'doc'
+        }
+        
+        // Include GitHub workflows and config
+        from('.github') {
+            into '.github'
+        }
+        
+        // Include any resources if they exist
+        if (file('src/main/resources').exists()) {
+            from 'src/main/resources'
+        }
+    }
+    
+    archiveFileName = "${project.name}.zip"
+    destinationDirectory = file('dist')
+    
+    doLast {
+        println "Extension package created: ${archiveFile.get()}"
+        println "Structure matches official GhidraSVD extension format"
+    }
+}
+
+// Install extension by extracting to Ghidra extensions directory
+task installExtension(type: Copy) {
+    dependsOn buildExtension
+    
+    // Extract the ZIP contents to the extensions directory
+    // The ZIP contains a GhidraSVD/ directory, so this will create Extensions/GhidraSVD/
+    from zipTree("dist/${project.name}.zip")
+    into GHIDRA_EXTENSIONS_DIR
+    
+    doFirst {
+        // Clean up any existing installation
+        delete "${GHIDRA_EXTENSIONS_DIR}/${project.name}"
+        delete "${GHIDRA_EXTENSIONS_DIR}/${project.name}.zip"
+    }
+    
+    doLast {
+        println "Extension installed to: ${GHIDRA_EXTENSIONS_DIR}/${project.name}"
+        println "Structure matches official GhidraSVD extension"
+        println "You may need to restart Ghidra for changes to take effect."
+    }
+}
+
+// Debug extension preparation task - RECOMMENDED METHOD
+task debugExtension {
+    dependsOn installExtension
+    
+    description = 'Prepares extension for debugging and provides debugging instructions'
+    
+    doLast {
+        println ""
+        println "=== DEBUGGING SETUP COMPLETE ==="
+        println ""
+        println "Extension installed with debug information to:"
+        println "  ${GHIDRA_EXTENSIONS_DIR}/${project.name}"
+        println ""
+        println "RECOMMENDED DEBUGGING WORKFLOW:"
+        println ""
+        println "METHOD 1: Use Ghidra's built-in debug script (default port 18001)"
+        println "1. Launch Ghidra with debug agent from terminal:"
+        println "   cd \"${GHIDRA_INSTALL_DIR}\""
+        println "   ./support/launch.sh debug jdk Ghidra 4G '' ghidra.GhidraRun"
+        println ""
+        println "2. In IntelliJ IDEA:"
+        println "   - Run → Edit Configurations"
+        println "   - Add new 'Remote JVM Debug' configuration"
+        println "   - Set Host: localhost, Port: 18001 (Ghidra's default debug port)"
+        println "   - Click 'Debug' to attach"
+        println ""
+        println "METHOD 2: Use custom port 5005"
+        println "1. Launch Ghidra with custom debug port (if needed):"
+        println "   cd \"${GHIDRA_INSTALL_DIR}\""
+        println "   ./ghidraRun -Xdebug -Xrunjdwp:transport=dt_socket,server=y,suspend=n,address=5005"
+        println ""
+        println "2. In IntelliJ IDEA:"
+        println "   - Set Host: localhost, Port: 5005"
+        println ""
+        println "3. In Ghidra (both methods):"
+        println "   - Open a project"
+        println "   - The GhidraSVD extension should be loaded automatically"
+        println "   - Set breakpoints in IntelliJ and trigger extension functionality"
+        println ""
+        println "TIP: Method 1 is recommended as it uses Ghidra's standard debug configuration."
+        println "TIP: This method avoids UI responsiveness issues."
+        println "=== Ready for debugging! ==="
+        println ""
+    }
+}
+
+// Legacy debug task - may cause UI issues
+task debugGhidra(type: Exec) {
+    workingDir GHIDRA_INSTALL_DIR
+    environment 'DEBUG_ADDRESS', '127.0.0.1:5005'
+    
+    description = 'Launch Ghidra with debug agent (may cause UI issues - use debugExtension instead)'
+    
+    if (System.getProperty('os.name').toLowerCase().contains('windows')) {
+        commandLine 'cmd', '/c', 'support\\launch.bat', 'debug', 'jdk', 'Ghidra', '4G', '', 'ghidra.GhidraRun'
+    } else {
+        commandLine 'bash', 'support/launch.sh', 'debug', 'jdk', 'Ghidra', '4G', '', 'ghidra.GhidraRun'
+    }
+    
+    doFirst {
+        println "WARNING: This method may cause UI responsiveness issues."
+        println "Consider using 'gradlew debugExtension' for better debugging workflow."
+        println ""
+        println "Starting Ghidra in debug mode..."
+        println "Debug agent will listen on port 5005"
+        println "Working directory: ${workingDir}"
+    }
+}
+
+// Alternative debug task using JavaExec with proper classpath
+task debugGhidraAlt(type: JavaExec) {
+    description = 'Launch Ghidra with debug agent using JavaExec (alternative method)'
+    
+    // Include all Ghidra JARs in classpath
+    classpath = fileTree(dir: "${GHIDRA_INSTALL_DIR}", include: "**/*.jar")
+    
+    mainClass = 'ghidra.GhidraRun'
+    
+    // Set system properties that Ghidra needs
+    systemProperties = [
+        'ghidra.install.dir': GHIDRA_INSTALL_DIR.absolutePath,
+        'user.name': System.getProperty('user.name')
+    ]
+    
+    jvmArgs = [
+        '-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=5005',
+        '-Xmx4G',
+        '-XX:+UseG1GC'
+    ]
+    
+    doFirst {
+        println "Starting Ghidra in debug mode (alternative method)..."
+        println "Debug agent will listen on port 5005"
+        println "Ghidra install dir: ${GHIDRA_INSTALL_DIR.absolutePath}"
+    }
 }
