@@ -99,6 +99,11 @@ public class SvdLoadTask extends Task {
 			processBlock(blockInfo);
 		}
 		
+		// Add SVD comments for all used peripherals after all blocks are processed
+		monitor.setMessage("Adding SVD comments to instructions...");
+		monitor.checkCancelled();
+		addSvdCommentsToInstructions(usedPeripherals);
+		
 		Msg.info(getClass(), "SVD import complete. Created " + blocks.size() + " memory blocks for " + 
 				 usedPeripherals.size() + " used peripherals out of " + device.getPeripherals().size() + " total peripherals.");
 	}
@@ -307,8 +312,7 @@ public class SvdLoadTask extends Task {
 		if (memOk) {
 			processBlockSymbol(blockInfo);
 			processBlockDataTypes(blockInfo);
-			// Add SVD comments to existing instructions
-			addSvdCommentsToInstructions(blockInfo);
+			// Note: SVD comments are now added after all blocks are processed
 		}
 	}
 
@@ -550,7 +554,154 @@ public class SvdLoadTask extends Task {
 	
 	/**
 	 * Process instructions in the program and add SVD-based comments
-	 * for memory references that match SVD registers
+	 * for memory references that match SVD registers from all used peripherals
+	 */
+	private void addSvdCommentsToInstructions(Set<SvdPeripheral> usedPeripherals) {
+		Listing listing = mProgram.getListing();
+		
+		// Create a comprehensive map of register addresses to their information from ALL used peripherals
+		Map<Long, String> registerMap = new HashMap<>();
+		// Also create a map for peripheral base addresses (for peripherals with no detailed registers)
+		Map<Long, String> peripheralBaseMap = new HashMap<>();
+		
+		for (SvdPeripheral periph : usedPeripherals) {
+			Msg.info(getClass(), "Processing peripheral: " + periph.getName() + " at base 0x" + String.format("%08X", periph.getBaseAddr()) + " with " + periph.getRegisters().size() + " registers");
+			
+			// For peripherals with detailed registers, add each register
+			if (periph.getRegisters().size() > 0) {
+				for (SvdRegister reg : periph.getRegisters()) {
+					long regAddress = periph.getBaseAddr() + reg.getOffset();
+					
+					// Debug RTC specifically
+					if (periph.getName().equals("RTC")) {
+						Msg.info(getClass(), "RTC Register: " + reg.getName() + " at offset 0x" + String.format("%X", reg.getOffset()) + " -> address 0x" + String.format("%08X", regAddress));
+					}
+					
+					// Build comprehensive comment with peripheral and register info
+					StringBuilder regInfo = new StringBuilder();
+					
+					// Start with peripheral.register name
+					regInfo.append(periph.getName()).append(".").append(reg.getName());
+					
+					String regDesc = reg.getDescription();
+					if (regDesc != null && !regDesc.trim().isEmpty()) {
+						regInfo.append(" - ").append(regDesc.trim());
+					}
+					
+					// Add register size information for additional context
+					int regSize = reg.getSize();
+					if (regSize > 0) {
+						regInfo.append(" [").append(regSize).append("-bit]");
+					}
+					
+					// Add register offset information for reference
+					long regOffset = reg.getOffset();
+					regInfo.append(" @0x").append(String.format("%X", regOffset));
+					
+					registerMap.put(regAddress, regInfo.toString());
+				}
+			} else {
+				// For peripherals with no detailed registers, add base address mapping
+				Msg.info(getClass(), "Adding fallback mapping for " + periph.getName() + " (no detailed registers)");
+				String periphInfo = periph.getName() + " peripheral @base";
+				peripheralBaseMap.put(periph.getBaseAddr(), periphInfo);
+			}
+		}
+		
+		if (registerMap.isEmpty() && peripheralBaseMap.isEmpty()) {
+			Msg.info(getClass(), "No registers or peripheral bases found for comment creation");
+			return; // No registers to process
+		}
+		
+		Msg.info(getClass(), "Created register map with " + registerMap.size() + " registers and " + peripheralBaseMap.size() + " peripheral bases from " + usedPeripherals.size() + " peripherals");
+		// Debug: Print first few register addresses
+		int count = 0;
+		for (Map.Entry<Long, String> entry : registerMap.entrySet()) {
+			if (count++ < 5) {
+				Msg.info(getClass(), "Register: 0x" + String.format("%08X", entry.getKey()) + " -> " + entry.getValue());
+			}
+		}
+		// Debug: Print peripheral base addresses
+		for (Map.Entry<Long, String> entry : peripheralBaseMap.entrySet()) {
+			Msg.info(getClass(), "Peripheral base: 0x" + String.format("%08X", entry.getKey()) + " -> " + entry.getValue());
+		}
+		
+		// Scan instructions and add SVD comments
+		int transactionId = mProgram.startTransaction("SVD comment addition for all peripherals");
+		boolean ok = false;
+		int commentsAdded = 0;
+		try {
+			// Iterate through all instructions in the program
+			var instructionIterator = listing.getInstructions(true);
+			int instructionsProcessed = 0;
+				
+			while (instructionIterator.hasNext()) {
+				var instruction = instructionIterator.next();
+				instructionsProcessed++;
+				
+				// Check each operand for memory references
+				for (int i = 0; i < instruction.getNumOperands(); i++) {
+					var operandAddresses = instruction.getOperandReferences(i);
+					for (var ref : operandAddresses) {
+						if (ref.isMemoryReference()) {
+							long targetAddr = ref.getToAddress().getOffset();
+							
+							// Debug: Log every memory reference we check
+							if (instructionsProcessed <= 10) {
+								Msg.info(getClass(), "Checking memory ref: 0x" + String.format("%08X", targetAddr) + " at instruction " + instruction.getAddress());
+							}
+							
+							// Check if this address matches any SVD register
+							String regInfo = findMatchingRegister(targetAddr, registerMap);
+							if (regInfo == null) {
+								// Check if it matches a peripheral base address
+								regInfo = findMatchingPeripheralBase(targetAddr, peripheralBaseMap);
+							}
+							
+							if (regInfo != null) {
+								// Debug: Log when we find a match
+								Msg.info(getClass(), "Found register/peripheral match: 0x" + String.format("%08X", targetAddr) + " -> " + regInfo + " at instruction " + instruction.getAddress());
+								
+								// Add comment to the instruction
+								String existingComment = listing.getComment(CodeUnit.EOL_COMMENT, instruction.getAddress());
+								String newComment = "SVD: " + regInfo;
+								
+								// Handle existing comments
+								if (existingComment != null && !existingComment.isEmpty()) {
+									// Extract peripheral.register pattern from regInfo
+									String periphRegPattern = extractPeriphRegPattern(regInfo);
+									if (periphRegPattern != null && existingComment.contains("SVD: " + periphRegPattern)) {
+										// Replace existing SVD comment with the new enhanced one
+										String updatedComment = removeOldSvdComment(existingComment, periphRegPattern);
+										if (updatedComment.trim().isEmpty()) {
+											newComment = newComment; // Only SVD comment
+										} else {
+											newComment = updatedComment + "; " + newComment;
+										}
+									} else {
+										// No existing SVD comment for this register, append new one
+										newComment = existingComment + "; " + newComment;
+									}
+								}
+								
+								listing.setComment(instruction.getAddress(), CodeUnit.EOL_COMMENT, newComment);
+								commentsAdded++;
+							}
+						}
+					}
+				}
+			}
+			ok = true;
+			Msg.info(getClass(), "Added " + commentsAdded + " SVD comments for all used peripherals");
+		} catch (Exception e) {
+			Msg.error(getClass(), "Error adding SVD comments for all peripherals", e);
+		}
+		mProgram.endTransaction(transactionId, ok);
+	}
+	
+	/**
+	 * Process instructions in the program and add SVD-based comments
+	 * for memory references that match SVD registers (legacy method for single block)
 	 */
 	private void addSvdCommentsToInstructions(BlockInfo blockInfo) {
 		addSvdCommentsToInstructions(blockInfo, true, false);
@@ -720,6 +871,29 @@ public class SvdLoadTask extends Task {
 					regInfo += String.format(" (+0x%x)", offset);
 				}
 				return regInfo;
+			}
+		}
+		
+		return null;
+	}
+	
+	/**
+	 * Find a matching peripheral base for the given address
+	 * This is used for peripherals that don't have detailed register definitions
+	 */
+	private String findMatchingPeripheralBase(long targetAddr, Map<Long, String> peripheralBaseMap) {
+		// Check if target address is within a reasonable range of any peripheral base
+		for (Map.Entry<Long, String> entry : peripheralBaseMap.entrySet()) {
+			long baseAddr = entry.getKey();
+			// Check if target address is within 1KB of peripheral base address
+			// This is a reasonable assumption for most peripheral register spaces
+			if (targetAddr >= baseAddr && targetAddr < baseAddr + 0x400) {
+				String periphInfo = entry.getValue();
+				long offset = targetAddr - baseAddr;
+				if (offset > 0) {
+					periphInfo += String.format(" +0x%X", offset);
+				}
+				return periphInfo;
 			}
 		}
 		
