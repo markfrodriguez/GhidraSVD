@@ -33,6 +33,7 @@ import ghidra.program.model.data.DataTypeConflictHandler;
 import ghidra.program.model.data.ProgramBasedDataTypeManager;
 import ghidra.program.model.data.StructureDataType;
 import ghidra.program.model.data.UnsignedLongDataType;
+import ghidra.program.model.listing.CodeUnit;
 import ghidra.program.model.listing.Listing;
 import ghidra.program.model.listing.Program;
 import ghidra.program.model.mem.Memory;
@@ -142,6 +143,8 @@ public class SvdLoadTask extends Task {
 		if (memOk) {
 			processBlockSymbol(blockInfo);
 			processBlockDataTypes(blockInfo);
+			// Add SVD comments to existing instructions
+			addSvdCommentsToInstructions(blockInfo);
 		}
 	}
 
@@ -347,16 +350,25 @@ public class SvdLoadTask extends Task {
 		AddressSpace addrSpace = mProgram.getAddressFactory().getDefaultAddressSpace();
 		Address addr = addrSpace.getAddress(blockInfo.block.getAddress().longValue());
 
-		// Add data type to listing...
+		// Add data type to listing (only if no conflicting data exists)...
 		Listing listing = mProgram.getListing();
 		transactionId = mProgram.startTransaction("SVD " + blockInfo.name + " data type listing placement");
 		ok = false;
 		try {
-			listing.createData(addr, struct);
+			// Check if there's already data at this address
+			if (listing.getDataAt(addr) == null && listing.getInstructionAt(addr) == null) {
+				listing.createData(addr, struct);
+				Msg.info(getClass(), "Created data structure for " + blockInfo.name + " at " + addr);
+			} else {
+				Msg.info(getClass(), "Skipped data structure creation for " + blockInfo.name + " at " + addr + " - conflicting data exists");
+			}
 			ok = true;
 		} catch (CodeUnitInsertionException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
+			Msg.warn(getClass(), "Could not create data structure for " + blockInfo.name + " at " + addr + ": " + e.getMessage());
+			ok = true; // Don't fail the entire transaction for data creation conflicts
+		} catch (Exception e) {
+			Msg.error(getClass(), "Unexpected error creating data structure for " + blockInfo.name + " at " + addr, e);
+			ok = true;
 		}
 		mProgram.endTransaction(transactionId, ok);
 	}
@@ -370,5 +382,237 @@ public class SvdLoadTask extends Task {
 					struct.replaceAtOffset(reg.getOffset(), new UnsignedLongDataType(), reg.getSize() / 8,
 							reg.getName(), reg.getDescription());
 		return struct;
+	}
+	
+	/**
+	 * Process instructions in the program and add SVD-based comments
+	 * for memory references that match SVD registers
+	 */
+	private void addSvdCommentsToInstructions(BlockInfo blockInfo) {
+		addSvdCommentsToInstructions(blockInfo, true, false);
+	}
+	
+	/**
+	 * Process instructions in the program and add SVD-based comments
+	 * for memory references that match SVD registers
+	 * 
+	 * @param blockInfo Block information containing peripherals and registers
+	 * @param preserveExistingComments If true, append to existing comments; if false, replace them
+	 * @param onlyCurrentBlock If true, only process instructions within the current block's address range
+	 */
+	private void addSvdCommentsToInstructions(BlockInfo blockInfo, boolean preserveExistingComments, boolean onlyCurrentBlock) {
+		Listing listing = mProgram.getListing();
+		AddressSpace addrSpace = mProgram.getAddressFactory().getDefaultAddressSpace();
+		
+		// Create a map of register addresses to their comprehensive information
+		Map<Long, String> registerMap = new HashMap<>();
+		for (SvdPeripheral periph : blockInfo.peripherals) {
+			for (SvdRegister reg : periph.getRegisters()) {
+				long regAddress = periph.getBaseAddr() + reg.getOffset();
+				
+				// Build comprehensive comment with peripheral and register info
+				StringBuilder regInfo = new StringBuilder();
+				
+				// Start with peripheral.register name
+				regInfo.append(periph.getName()).append(".").append(reg.getName());
+				
+				// Try to get peripheral description using reflection if available
+				// TODO: retrieve peripheral description from SVD XML
+				String periphDesc = "";
+				String regDesc = reg.getDescription();
+				
+				// Build comment with peripheral description (if available) and register description
+				if (periphDesc != null && !periphDesc.trim().isEmpty() && 
+					regDesc != null && !regDesc.trim().isEmpty()) {
+					// Both descriptions available - format: "Peripheral Desc - Register Desc"
+					regInfo.append(" - ").append(periphDesc.trim())
+						   .append(" - ").append(regDesc.trim());
+				} else if (periphDesc != null && !periphDesc.trim().isEmpty()) {
+					// Only peripheral description
+					regInfo.append(" - ").append(periphDesc.trim());
+				} else if (regDesc != null && !regDesc.trim().isEmpty()) {
+					// Only register description
+					regInfo.append(" - ").append(regDesc.trim());
+				}
+				
+				// Add register size information for additional context
+				int regSize = reg.getSize();
+				if (regSize > 0) {
+					regInfo.append(" [").append(regSize).append("-bit]");
+				}
+				
+				// Add register offset information for reference
+				long regOffset = reg.getOffset();
+				regInfo.append(" @0x").append(String.format("%X", regOffset));
+				
+				// Note: Could add more info if available from SVD parser
+				
+				registerMap.put(regAddress, regInfo.toString());
+			}
+		}
+		
+		if (registerMap.isEmpty()) {
+			return; // No registers to process
+		}
+		
+		// Determine the address range to scan
+		Address startAddr = null;
+		Address endAddr = null;
+		if (onlyCurrentBlock) {
+			startAddr = addrSpace.getAddress(blockInfo.block.getAddress());
+			// Calculate end address safely
+			long endOffset = blockInfo.block.getAddress() + blockInfo.block.getSize() - 1;
+			if (endOffset > addrSpace.getMaxAddress().getOffset()) {
+				endAddr = addrSpace.getMaxAddress();
+			} else {
+				endAddr = addrSpace.getAddress(endOffset);
+			}
+		}
+		
+		// Scan instructions and add SVD comments
+		int transactionId = mProgram.startTransaction("SVD comment addition for " + blockInfo.name);
+		boolean ok = false;
+		int commentsAdded = 0;
+		try {
+			// Iterate through instructions
+			var instructionIterator = onlyCurrentBlock ? 
+				listing.getInstructions(startAddr, true) : 
+				listing.getInstructions(true);
+				
+			while (instructionIterator.hasNext()) {
+				var instruction = instructionIterator.next();
+				
+				// If processing only current block, check if we're still in range
+				if (onlyCurrentBlock && instruction.getAddress().compareTo(endAddr) > 0) {
+					break;
+				}
+				
+				// Check each operand for memory references
+				for (int i = 0; i < instruction.getNumOperands(); i++) {
+					var operandAddresses = instruction.getOperandReferences(i);
+					for (var ref : operandAddresses) {
+						if (ref.isMemoryReference()) {
+							long targetAddr = ref.getToAddress().getOffset();
+							
+							// Check if this address matches any SVD register
+							String regInfo = findMatchingRegister(targetAddr, registerMap);
+							if (regInfo != null) {
+								// Add comment to the instruction
+								String existingComment = listing.getComment(CodeUnit.EOL_COMMENT, instruction.getAddress());
+								String newComment = "SVD: " + regInfo;
+								
+								// Handle existing comments
+								if (preserveExistingComments && existingComment != null && !existingComment.isEmpty()) {
+									// Extract peripheral.register pattern from regInfo
+									String periphRegPattern = extractPeriphRegPattern(regInfo);
+									if (periphRegPattern != null && existingComment.contains("SVD: " + periphRegPattern)) {
+										// Replace existing SVD comment with the new enhanced one
+										// Remove old SVD comment pattern and add new one
+										String updatedComment = removeOldSvdComment(existingComment, periphRegPattern);
+										if (updatedComment.trim().isEmpty()) {
+											newComment = newComment; // Only SVD comment
+										} else {
+											newComment = updatedComment + "; " + newComment;
+										}
+									} else {
+										// No existing SVD comment for this register, append new one
+										newComment = existingComment + "; " + newComment;
+									}
+								}
+								
+								listing.setComment(instruction.getAddress(), CodeUnit.EOL_COMMENT, newComment);
+								commentsAdded++;
+							}
+						}
+					}
+				}
+			}
+			ok = true;
+			Msg.info(getClass(), "Added " + commentsAdded + " SVD comments for " + blockInfo.name);
+		} catch (Exception e) {
+			Msg.error(getClass(), "Error adding SVD comments for " + blockInfo.name, e);
+		}
+		mProgram.endTransaction(transactionId, ok);
+	}
+	
+	/**
+	 * Find a matching register for the given address, with some tolerance
+	 * for partial register accesses (byte/halfword accesses to word registers)
+	 */
+	private String findMatchingRegister(long targetAddr, Map<Long, String> registerMap) {
+		// Exact match first
+		if (registerMap.containsKey(targetAddr)) {
+			return registerMap.get(targetAddr);
+		}
+		
+		// Check for partial register access (e.g., byte access to 32-bit register)
+		for (Map.Entry<Long, String> entry : registerMap.entrySet()) {
+			long regAddr = entry.getKey();
+			// Check if target address is within 4 bytes of register address
+			if (targetAddr >= regAddr && targetAddr < regAddr + 4) {
+				String regInfo = entry.getValue();
+				long offset = targetAddr - regAddr;
+				if (offset > 0) {
+					regInfo += String.format(" (+0x%x)", offset);
+				}
+				return regInfo;
+			}
+		}
+		
+		return null;
+	}
+	
+	/**
+	 * Extract peripheral.register pattern from regInfo string
+	 * @param regInfo The register info string (e.g., "GCLK.SYNCBUSY - Description...")
+	 * @return The peripheral.register pattern (e.g., "GCLK.SYNCBUSY")
+	 */
+	private String extractPeriphRegPattern(String regInfo) {
+		if (regInfo == null || regInfo.isEmpty()) {
+			return null;
+		}
+		
+		// Find the first " - " to extract the peripheral.register part
+		int dashIndex = regInfo.indexOf(" - ");
+		if (dashIndex > 0) {
+			return regInfo.substring(0, dashIndex);
+		}
+		
+		// If no dash found, check for the first space or bracket
+		int spaceIndex = regInfo.indexOf(" ");
+		if (spaceIndex > 0) {
+			return regInfo.substring(0, spaceIndex);
+		}
+		
+		return regInfo; // Return as-is if no separators found
+	}
+	
+	/**
+	 * Remove old SVD comment for a specific peripheral.register from existing comment
+	 * @param existingComment The existing comment that may contain old SVD info
+	 * @param periphRegPattern The peripheral.register pattern to remove (e.g., "GCLK.SYNCBUSY")
+	 * @return The comment with the old SVD entry removed
+	 */
+	private String removeOldSvdComment(String existingComment, String periphRegPattern) {
+		if (existingComment == null || existingComment.isEmpty() || periphRegPattern == null) {
+			return existingComment;
+		}
+		
+		// Split comment by semicolons to find individual comment parts
+		String[] commentParts = existingComment.split(";");
+		StringBuilder result = new StringBuilder();
+		
+		for (String part : commentParts) {
+			String trimmedPart = part.trim();
+			// Skip any SVD comment that contains our peripheral.register pattern
+			if (!trimmedPart.startsWith("SVD: " + periphRegPattern)) {
+				if (result.length() > 0) {
+					result.append("; ");
+				}
+				result.append(trimmedPart);
+			}
+		}
+		
+		return result.toString();
 	}
 }
