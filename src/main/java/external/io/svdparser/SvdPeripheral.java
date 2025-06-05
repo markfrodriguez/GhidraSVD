@@ -241,8 +241,8 @@ public class SvdPeripheral {
 		// Adjust offset to include cluster offset
 		long adjustedOffset = originalRegister.getOffset() + clusterOffset;
 		
-		// Create new register with cluster context using the factory method
-		return SvdRegister.createRegister(enhancedName, enhancedDescription, adjustedOffset, originalRegister.getSize());
+		// Create new register with cluster context using the factory method, preserving fields
+		return SvdRegister.createRegister(enhancedName, enhancedDescription, adjustedOffset, originalRegister.getSize(), originalRegister.getFields());
 	}
 
 	public String toString() {

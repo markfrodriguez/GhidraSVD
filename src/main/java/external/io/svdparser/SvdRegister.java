@@ -16,6 +16,7 @@
 package io.svdparser;
 
 import java.util.ArrayList;
+import java.util.List;
 
 import org.w3c.dom.Element;
 
@@ -28,6 +29,7 @@ public class SvdRegister {
 	private String mDescription;
 	private Integer mSize;
 	private Integer mOffset;
+	private List<SvdField> mFields;
 
 	/**
 	 * Create an SvdRegister from a DOM element.
@@ -69,20 +71,34 @@ public class SvdRegister {
 		Element offsetElement = Utils.getSingleFirstOrderChildElementByTagName(el, "addressOffset");
 		Integer offset = Integer.decode(offsetElement.getTextContent());
 
+		// Parse fields (optional)
+		List<SvdField> fields = new ArrayList<>();
+		Element fieldsElement = Utils.getSingleFirstOrderChildElementByTagName(el, "fields");
+		if (fieldsElement != null) {
+			for (Element fieldElement : Utils.getFirstOrderChildElementsByTagName(fieldsElement, "field")) {
+				fields.addAll(SvdField.fromElement(fieldElement));
+			}
+		}
+
 		ArrayList<SvdRegister> regs = new ArrayList<SvdRegister>();
 		for (Integer i = 0; i < dim; i++) {
 			Integer addrIncrement = i * dimIncrement;
 			String regName = name.formatted(String.valueOf(i));
-			regs.add(new SvdRegister(regName, description, defaultSize, offset + addrIncrement));
+			regs.add(new SvdRegister(regName, description, defaultSize, offset + addrIncrement, fields));
 		}
 		return regs;
 	}
 
 	private SvdRegister(String name, String description, int size, int offset) {
+		this(name, description, size, offset, new ArrayList<>());
+	}
+
+	private SvdRegister(String name, String description, int size, int offset, List<SvdField> fields) {
 		mName = name;
 		mDescription = description;
 		mSize = size;
 		mOffset = offset;
+		mFields = new ArrayList<>(fields); // Create a copy to avoid sharing references
 	}
 	
 	/**
@@ -95,7 +111,21 @@ public class SvdRegister {
 	 * @return A new SvdRegister object
 	 */
 	public static SvdRegister createRegister(String name, String description, long offset, int size) {
-		return new SvdRegister(name, description, size, (int) offset);
+		return new SvdRegister(name, description, size, (int) offset, new ArrayList<>());
+	}
+
+	/**
+	 * Create an SvdRegister with specific parameters including fields (for cluster support)
+	 * 
+	 * @param name        Register name
+	 * @param description Register description
+	 * @param offset      Register offset
+	 * @param size        Register size
+	 * @param fields      Register fields
+	 * @return A new SvdRegister object
+	 */
+	public static SvdRegister createRegister(String name, String description, long offset, int size, List<SvdField> fields) {
+		return new SvdRegister(name, description, size, (int) offset, fields);
 	}
 
 	/**
@@ -123,6 +153,15 @@ public class SvdRegister {
 	 */
 	public Integer getSize() {
 		return mSize;
+	}
+
+	/**
+	 * Get the register fields.
+	 * 
+	 * @return A list of SvdField objects representing the register's fields.
+	 */
+	public List<SvdField> getFields() {
+		return mFields;
 	}
 
 	/**

@@ -671,6 +671,14 @@ public class SvdLoadTask extends Task {
 						regInfo.append(" [").append(regSize).append("-bit]");
 					}
 					
+					// Add field information with actual register value analysis
+					if (!reg.getFields().isEmpty()) {
+						String fieldAnalysis = analyzeRegisterFields(regAddress, reg);
+						if (fieldAnalysis != null && !fieldAnalysis.trim().isEmpty()) {
+							regInfo.append(" {").append(fieldAnalysis).append("}");
+						}
+					}
+					
 					// Add register offset information for reference
 					long regOffset = reg.getOffset();
 					regInfo.append(" @0x").append(String.format("%X", regOffset));
@@ -941,6 +949,121 @@ public class SvdLoadTask extends Task {
 		}
 		
 		return null;
+	}
+	
+	/**
+	 * Analyze register fields with actual memory values from Ghidra
+	 * @param regAddress The register address to read from
+	 * @param register The SVD register with field definitions
+	 * @return String containing field analysis, or null if no meaningful analysis
+	 */
+	private String analyzeRegisterFields(long regAddress, SvdRegister register) {
+		try {
+			// Try to read the actual register value from memory
+			AddressSpace addrSpace = mProgram.getAddressFactory().getDefaultAddressSpace();
+			Address addr = addrSpace.getAddress(regAddress);
+			
+			// Check if memory exists at this address
+			MemoryBlock memBlock = mMemory.getBlock(addr);
+			if (memBlock == null) {
+				// No memory block - fall back to basic field listing
+				return createBasicFieldListing(register);
+			}
+			
+			// Read the register value based on register size
+			long registerValue = 0;
+			int regSizeBytes = register.getSize() / 8;
+			
+			try {
+				switch (regSizeBytes) {
+					case 1:
+						registerValue = mMemory.getByte(addr) & 0xFF;
+						break;
+					case 2:
+						registerValue = mMemory.getShort(addr) & 0xFFFF;
+						break;
+					case 4:
+						registerValue = mMemory.getInt(addr) & 0xFFFFFFFFL;
+						break;
+					case 8:
+						registerValue = mMemory.getLong(addr);
+						break;
+					default:
+						// For unusual sizes, fall back to basic listing
+						return createBasicFieldListing(register);
+				}
+			} catch (Exception e) {
+				// Memory read failed - fall back to basic field listing
+				return createBasicFieldListing(register);
+			}
+			
+			// Analyze each field with the actual register value
+			StringBuilder fieldAnalysis = new StringBuilder();
+			boolean first = true;
+			int activeFields = 0;
+			
+			for (var field : register.getFields()) {
+				long fieldValue = field.extractValue(registerValue);
+				boolean isSet = field.isSet(registerValue);
+				
+				// Only include fields that are set or have interesting values
+				if (isSet || fieldValue != 0) {
+					if (!first) fieldAnalysis.append(", ");
+					
+					fieldAnalysis.append(field.getName());
+					if (fieldValue != 0) {
+						fieldAnalysis.append("=0x").append(Long.toHexString(fieldValue).toUpperCase());
+					}
+					
+					// Add field description if available and concise
+					String desc = field.getDescription();
+					if (desc != null && !desc.trim().isEmpty() && desc.length() < 50) {
+						fieldAnalysis.append(":").append(desc.trim());
+					}
+					
+					first = false;
+					activeFields++;
+				}
+			}
+			
+			// If no fields are active, provide a summary
+			if (activeFields == 0) {
+				fieldAnalysis.append("All fields clear (0x").append(Long.toHexString(registerValue).toUpperCase()).append(")");
+			} else if (activeFields < register.getFields().size()) {
+				// Show register value for context
+				fieldAnalysis.append(" [reg=0x").append(Long.toHexString(registerValue).toUpperCase()).append("]");
+			}
+			
+			return fieldAnalysis.toString();
+			
+		} catch (Exception e) {
+			// Any error - fall back to basic field listing
+			return createBasicFieldListing(register);
+		}
+	}
+	
+	/**
+	 * Create a basic field listing without value analysis
+	 * @param register The SVD register with field definitions
+	 * @return String containing basic field names and descriptions
+	 */
+	private String createBasicFieldListing(SvdRegister register) {
+		StringBuilder fieldInfo = new StringBuilder();
+		boolean first = true;
+		
+		for (var field : register.getFields()) {
+			if (!first) fieldInfo.append(", ");
+			fieldInfo.append(field.getName());
+			
+			// Add concise description if available
+			String desc = field.getDescription();
+			if (desc != null && !desc.trim().isEmpty() && desc.length() < 50) {
+				fieldInfo.append(":").append(desc.trim());
+			}
+			first = false;
+		}
+		
+		return fieldInfo.toString();
 	}
 	
 }
