@@ -32,10 +32,15 @@ import ghidra.framework.store.LockException;
 import ghidra.program.model.address.Address;
 import ghidra.program.model.address.AddressOverflowException;
 import ghidra.program.model.address.AddressSpace;
+import ghidra.program.model.data.ArrayDataType;
+import ghidra.program.model.data.ByteDataType;
+import ghidra.program.model.data.DataType;
 import ghidra.program.model.data.DataTypeConflictHandler;
+import ghidra.program.model.data.DWordDataType;
 import ghidra.program.model.data.ProgramBasedDataTypeManager;
+import ghidra.program.model.data.QWordDataType;
 import ghidra.program.model.data.StructureDataType;
-import ghidra.program.model.data.UnsignedLongDataType;
+import ghidra.program.model.data.WordDataType;
 import ghidra.program.model.listing.CodeUnit;
 import ghidra.program.model.listing.Listing;
 import ghidra.program.model.listing.Program;
@@ -88,7 +93,15 @@ public class SvdLoadTask extends Task {
 
 		monitor.setMessage("Scanning program for peripheral usage...");
 		monitor.checkCancelled();
-		Set<SvdPeripheral> usedPeripherals = findUsedPeripherals(device, monitor);
+		Map<SvdPeripheral, PeripheralUsage> peripheralUsage = findPeripheralUsage(device, monitor);
+		
+		// Extract only the peripherals that are actually used for segment creation
+		Set<SvdPeripheral> usedPeripherals = new HashSet<>();
+		for (PeripheralUsage usage : peripheralUsage.values()) {
+			if (usage.isUsed) {
+				usedPeripherals.add(usage.peripheral);
+			}
+		}
 		
 		monitor.setMessage("Creating blocks for " + usedPeripherals.size() + " used peripherals...");
 		monitor.checkCancelled();
@@ -100,7 +113,7 @@ public class SvdLoadTask extends Task {
 			processBlock(blockInfo);
 		}
 		
-		// Add SVD comments for all used peripherals after all blocks are processed
+		// Add SVD comments for all used peripherals (with full register data available) after all blocks are processed
 		monitor.setMessage("Adding SVD comments to instructions...");
 		monitor.checkCancelled();
 		addSvdCommentsToInstructions(usedPeripherals);
@@ -110,10 +123,29 @@ public class SvdLoadTask extends Task {
 	}
 
 	/**
-	 * Scan the program to find which peripherals are actually referenced in the code
+	 * Wrapper class to track peripheral usage while maintaining register data
 	 */
-	private Set<SvdPeripheral> findUsedPeripherals(SvdDevice device, TaskMonitor monitor) throws CancelledException {
-		Set<SvdPeripheral> usedPeripherals = new HashSet<>();
+	private static class PeripheralUsage {
+		public final SvdPeripheral peripheral;
+		public boolean isUsed;
+		
+		public PeripheralUsage(SvdPeripheral peripheral) {
+			this.peripheral = peripheral;
+			this.isUsed = false;
+		}
+	}
+
+	/**
+	 * Scan the program to find which peripherals are actually referenced in the code
+	 * Returns a map of all peripherals with usage flags
+	 */
+	private Map<SvdPeripheral, PeripheralUsage> findPeripheralUsage(SvdDevice device, TaskMonitor monitor) throws CancelledException {
+		// Create usage tracking for ALL peripherals (so derivedFrom works)
+		Map<SvdPeripheral, PeripheralUsage> peripheralUsage = new HashMap<>();
+		for (SvdPeripheral periph : device.getPeripherals()) {
+			peripheralUsage.put(periph, new PeripheralUsage(periph));
+		}
+		
 		Listing listing = mProgram.getListing();
 		
 		// Scan all instructions for memory references
@@ -139,7 +171,7 @@ public class SvdLoadTask extends Task {
 						// Check if this address belongs to any peripheral
 						SvdPeripheral matchingPeriph = findPeripheralForAddress(targetAddr, device.getPeripherals());
 						if (matchingPeriph != null) {
-							usedPeripherals.add(matchingPeriph);
+							peripheralUsage.get(matchingPeriph).isUsed = true;
 						}
 					}
 				}
@@ -153,7 +185,7 @@ public class SvdLoadTask extends Task {
 						long value = ((Number) obj).longValue();
 						SvdPeripheral matchingPeriph = findPeripheralForAddress(value, device.getPeripherals());
 						if (matchingPeriph != null) {
-							usedPeripherals.add(matchingPeriph);
+							peripheralUsage.get(matchingPeriph).isUsed = true;
 						}
 					}
 				}
@@ -186,7 +218,7 @@ public class SvdLoadTask extends Task {
 						long addr = ((Number) value).longValue();
 						SvdPeripheral matchingPeriph = findPeripheralForAddress(addr, device.getPeripherals());
 						if (matchingPeriph != null) {
-							usedPeripherals.add(matchingPeriph);
+							peripheralUsage.get(matchingPeriph).isUsed = true;
 						}
 					}
 				}
@@ -195,8 +227,10 @@ public class SvdLoadTask extends Task {
 			}
 		}
 		
-		monitor.setMessage("Found " + usedPeripherals.size() + " used peripherals out of " + device.getPeripherals().size() + " total");
-		return usedPeripherals;
+		// Count how many peripherals are marked as used
+		long usedCount = peripheralUsage.values().stream().mapToLong(usage -> usage.isUsed ? 1 : 0).sum();
+		monitor.setMessage("Found " + usedCount + " used peripherals out of " + device.getPeripherals().size() + " total");
+		return peripheralUsage;
 	}
 	
 	/**
@@ -545,11 +579,41 @@ public class SvdLoadTask extends Task {
 	private StructureDataType createPeripheralBlockDataType(BlockInfo blockInfo) {
 		String struct_name = blockInfo.name.replace('/', '_') + "_reg_t";
 		StructureDataType struct = new StructureDataType(struct_name, blockInfo.block.getSize().intValue());
-		for (SvdPeripheral periph : blockInfo.peripherals)
-			for (SvdRegister reg : periph.getRegisters())
-				if (reg.getOffset() < blockInfo.block.getSize())
-					struct.replaceAtOffset(reg.getOffset(), new UnsignedLongDataType(), reg.getSize() / 8,
-							reg.getName(), reg.getDescription());
+		for (SvdPeripheral periph : blockInfo.peripherals) {
+			for (SvdRegister reg : periph.getRegisters()) {
+				if (reg.getOffset() < blockInfo.block.getSize()) {
+					// Choose the appropriate data type based on register size
+					int regSizeBytes = reg.getSize() / 8;
+					DataType dataType;
+					switch (regSizeBytes) {
+						case 1:
+							dataType = new ByteDataType();
+							break;
+						case 2:
+							dataType = new WordDataType();
+							break;
+						case 4:
+							dataType = new DWordDataType();
+							break;
+						case 8:
+							dataType = new QWordDataType();
+							break;
+						default:
+							// For unusual sizes, create an array of bytes
+							dataType = new ArrayDataType(new ByteDataType(), regSizeBytes, 1);
+							break;
+					}
+					
+					try {
+						struct.replaceAtOffset(reg.getOffset(), dataType, 1, reg.getName(), reg.getDescription());
+					} catch (Exception e) {
+						// Log the error but continue processing other registers
+						Msg.warn(getClass(), "Could not add register " + reg.getName() + " at offset 0x" + 
+							String.format("%X", reg.getOffset()) + " to structure " + struct_name + ": " + e.getMessage());
+					}
+				}
+			}
+		}
 		return struct;
 	}
 	

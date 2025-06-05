@@ -87,12 +87,20 @@ public class SvdPeripheral {
 		if (sizeElement != null)
 			defaultSize = Integer.decode(sizeElement.getTextContent());
 
-		// Parse registers
+		// Parse registers (both direct registers and registers within clusters)
 		List<SvdRegister> registers = new ArrayList<>();
 		Element registersElement = Utils.getSingleFirstOrderChildElementByTagName(el, "registers");
-		if (registersElement != null)
+		if (registersElement != null) {
+			// Parse direct registers
 			for (Element e : Utils.getFirstOrderChildElementsByTagName(registersElement, "register"))
 				registers.addAll(SvdRegister.fromElement(e, defaultSize));
+			
+			// Parse registers within clusters
+			for (Element clusterElement : Utils.getFirstOrderChildElementsByTagName(registersElement, "cluster")) {
+				List<SvdRegister> clusterRegisters = parseClusterRegisters(clusterElement, defaultSize);
+				registers.addAll(clusterRegisters);
+			}
+		}
 
 		ArrayList<SvdPeripheral> periph = new ArrayList<SvdPeripheral>();
 		for (Integer i = 0; i < dim; i++) {
@@ -170,6 +178,71 @@ public class SvdPeripheral {
 	 */
 	public List<SvdRegister> getRegisters() {
 		return mRegisters;
+	}
+
+	/**
+	 * Parse registers from a cluster element
+	 * @param clusterElement The cluster DOM element
+	 * @param defaultSize Default register size
+	 * @return List of registers with cluster name prefixed
+	 */
+	private static List<SvdRegister> parseClusterRegisters(Element clusterElement, int defaultSize) 
+			throws SvdParserException {
+		List<SvdRegister> clusterRegisters = new ArrayList<>();
+		
+		// Get cluster name for prefixing register names
+		Element clusterNameElement = Utils.getSingleFirstOrderChildElementByTagName(clusterElement, "name");
+		String clusterName = (clusterNameElement != null) ? clusterNameElement.getTextContent() : "CLUSTER";
+		
+		// Get cluster description for context
+		Element clusterDescElement = Utils.getSingleFirstOrderChildElementByTagName(clusterElement, "description");
+		String clusterDescription = (clusterDescElement != null) ? clusterDescElement.getTextContent() : null;
+		
+		// Get cluster address offset (relative to peripheral base)
+		Element addressOffsetElement = Utils.getSingleFirstOrderChildElementByTagName(clusterElement, "addressOffset");
+		long clusterOffset = 0;
+		if (addressOffsetElement != null) {
+			clusterOffset = Long.decode(addressOffsetElement.getTextContent());
+		}
+		
+		// Parse all registers within this cluster
+		for (Element registerElement : Utils.getFirstOrderChildElementsByTagName(clusterElement, "register")) {
+			List<SvdRegister> registers = SvdRegister.fromElement(registerElement, defaultSize);
+			
+			// Prefix register names with cluster name and adjust offsets
+			for (SvdRegister register : registers) {
+				// Create a new register with cluster-prefixed name and adjusted offset
+				SvdRegister clusterRegister = createClusterRegister(register, clusterName, clusterDescription, clusterOffset);
+				clusterRegisters.add(clusterRegister);
+			}
+		}
+		
+		return clusterRegisters;
+	}
+	
+	/**
+	 * Create a new register with cluster context
+	 */
+	private static SvdRegister createClusterRegister(SvdRegister originalRegister, String clusterName, 
+			String clusterDescription, long clusterOffset) {
+		// Create enhanced name: ClusterName_RegisterName (e.g., "I2CS_CTRLA", "USART_BAUD")
+		String enhancedName = clusterName + "_" + originalRegister.getName();
+		
+		// Create enhanced description that includes cluster context
+		String enhancedDescription = originalRegister.getDescription();
+		if (clusterDescription != null && !clusterDescription.trim().isEmpty()) {
+			if (enhancedDescription != null && !enhancedDescription.trim().isEmpty()) {
+				enhancedDescription = clusterDescription + " - " + enhancedDescription;
+			} else {
+				enhancedDescription = clusterDescription;
+			}
+		}
+		
+		// Adjust offset to include cluster offset
+		long adjustedOffset = originalRegister.getOffset() + clusterOffset;
+		
+		// Create new register with cluster context using the factory method
+		return SvdRegister.createRegister(enhancedName, enhancedDescription, adjustedOffset, originalRegister.getSize());
 	}
 
 	public String toString() {

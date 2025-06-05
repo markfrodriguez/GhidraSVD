@@ -84,6 +84,19 @@ public class SvdRegister {
 		mSize = size;
 		mOffset = offset;
 	}
+	
+	/**
+	 * Create an SvdRegister with specific parameters (for cluster support)
+	 * 
+	 * @param name        Register name
+	 * @param description Register description
+	 * @param offset      Register offset
+	 * @param size        Register size
+	 * @return A new SvdRegister object
+	 */
+	public static SvdRegister createRegister(String name, String description, long offset, int size) {
+		return new SvdRegister(name, description, size, (int) offset);
+	}
 
 	/**
 	 * Get the register name.
