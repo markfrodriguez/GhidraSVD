@@ -25,6 +25,7 @@ import org.w3c.dom.Element;
  */
 public class SvdPeripheral {
 	private String mName;
+	private String mDescription;
 	private Long mBaseAddr;
 	private List<SvdAddressBlock> mAddressBlocks;
 	private List<SvdRegister> mRegisters;
@@ -57,6 +58,10 @@ public class SvdPeripheral {
 		// Get a name
 		Element nameElement = Utils.getSingleFirstOrderChildElementByTagName(el, "name");
 		String name = nameElement.getTextContent();
+
+		// Get description (optional)
+		Element descriptionElement = Utils.getSingleFirstOrderChildElementByTagName(el, "description");
+		String description = (descriptionElement != null) ? descriptionElement.getTextContent() : null;
 
 		// Check if the peripheral derives from any other...
 		SvdPeripheral derivedFrom = null;
@@ -93,25 +98,30 @@ public class SvdPeripheral {
 		for (Integer i = 0; i < dim; i++) {
 			Integer addrIncrement = i * dimIncrement;
 			String periphName = name.formatted(String.valueOf(i));
-			periph.add(new SvdPeripheral(derivedFrom, periphName, baseAddr + addrIncrement, addressBlocks, registers));
+			periph.add(new SvdPeripheral(derivedFrom, periphName, description, baseAddr + addrIncrement, addressBlocks, registers));
 		}
 		return periph;
 	}
 
-	private SvdPeripheral(String name, Long baseAddr, List<SvdAddressBlock> addressBlocks,
+	private SvdPeripheral(String name, String description, Long baseAddr, List<SvdAddressBlock> addressBlocks,
 			List<SvdRegister> registers) {
-		this(null, name, baseAddr, addressBlocks, registers);
+		this(null, name, description, baseAddr, addressBlocks, registers);
 	}
 
-	private SvdPeripheral(SvdPeripheral derivedFrom, String name, Long baseAddr, List<SvdAddressBlock> addressBlocks,
+	private SvdPeripheral(SvdPeripheral derivedFrom, String name, String description, Long baseAddr, List<SvdAddressBlock> addressBlocks,
 			List<SvdRegister> registers) {
 		mName = name;
+		mDescription = description;
 		mBaseAddr = baseAddr;
 		mAddressBlocks = new ArrayList<SvdAddressBlock>();
 		mRegisters = new ArrayList<SvdRegister>();
 		if (derivedFrom != null) {
 			mAddressBlocks.addAll(derivedFrom.getAddressBlocks());
 			mRegisters.addAll(derivedFrom.getRegisters());
+			// Inherit description from derived peripheral if current one is null
+			if (mDescription == null && derivedFrom.getDescription() != null) {
+				mDescription = derivedFrom.getDescription();
+			}
 		}
 		mAddressBlocks.addAll(addressBlocks);
 		mRegisters.addAll(registers);
@@ -124,6 +134,15 @@ public class SvdPeripheral {
 	 */
 	public String getName() {
 		return mName;
+	}
+
+	/**
+	 * Get the peripheral description.
+	 * 
+	 * @return A string representing a peripheral description, or null if not available.
+	 */
+	public String getDescription() {
+		return mDescription;
 	}
 
 	/**

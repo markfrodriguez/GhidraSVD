@@ -584,8 +584,20 @@ public class SvdLoadTask extends Task {
 					// Start with peripheral.register name
 					regInfo.append(periph.getName()).append(".").append(reg.getName());
 					
+					// Add peripheral description first (if available)
+					String periphDesc = periph.getDescription();
 					String regDesc = reg.getDescription();
-					if (regDesc != null && !regDesc.trim().isEmpty()) {
+					
+					if (periphDesc != null && !periphDesc.trim().isEmpty() && 
+						regDesc != null && !regDesc.trim().isEmpty()) {
+						// Both descriptions available - format: "Peripheral Desc; Register Desc"
+						regInfo.append(" - ").append(periphDesc.trim())
+							   .append("; ").append(regDesc.trim());
+					} else if (periphDesc != null && !periphDesc.trim().isEmpty()) {
+						// Only peripheral description
+						regInfo.append(" - ").append(periphDesc.trim());
+					} else if (regDesc != null && !regDesc.trim().isEmpty()) {
+						// Only register description
 						regInfo.append(" - ").append(regDesc.trim());
 					}
 					
@@ -604,8 +616,17 @@ public class SvdLoadTask extends Task {
 			} else {
 				// For peripherals with no detailed registers, add base address mapping
 				Msg.info(getClass(), "Adding fallback mapping for " + periph.getName() + " (no detailed registers)");
-				String periphInfo = periph.getName() + " peripheral @base";
-				peripheralBaseMap.put(periph.getBaseAddr(), periphInfo);
+				StringBuilder periphInfo = new StringBuilder();
+				periphInfo.append(periph.getName()).append(" peripheral");
+				
+				// Add peripheral description if available
+				String periphDesc = periph.getDescription();
+				if (periphDesc != null && !periphDesc.trim().isEmpty()) {
+					periphInfo.append(" - ").append(periphDesc.trim());
+				}
+				periphInfo.append(" @base");
+				
+				peripheralBaseMap.put(periph.getBaseAddr(), periphInfo.toString());
 			}
 		}
 		
@@ -663,28 +684,8 @@ public class SvdLoadTask extends Task {
 								// Debug: Log when we find a match
 								Msg.info(getClass(), "Found register/peripheral match: 0x" + String.format("%08X", targetAddr) + " -> " + regInfo + " at instruction " + instruction.getAddress());
 								
-								// Add comment to the instruction
-								String existingComment = listing.getComment(CodeUnit.EOL_COMMENT, instruction.getAddress());
+								// Simply overwrite any existing comment with our SVD comment
 								String newComment = "SVD: " + regInfo;
-								
-								// Handle existing comments
-								if (existingComment != null && !existingComment.isEmpty()) {
-									// Extract peripheral.register pattern from regInfo
-									String periphRegPattern = extractPeriphRegPattern(regInfo);
-									if (periphRegPattern != null && existingComment.contains("SVD: " + periphRegPattern)) {
-										// Replace existing SVD comment with the new enhanced one
-										String updatedComment = removeOldSvdComment(existingComment, periphRegPattern);
-										if (updatedComment.trim().isEmpty()) {
-											newComment = newComment; // Only SVD comment
-										} else {
-											newComment = updatedComment + "; " + newComment;
-										}
-									} else {
-										// No existing SVD comment for this register, append new one
-										newComment = existingComment + "; " + newComment;
-									}
-								}
-								
 								listing.setComment(instruction.getAddress(), CodeUnit.EOL_COMMENT, newComment);
 								commentsAdded++;
 							}
@@ -732,17 +733,15 @@ public class SvdLoadTask extends Task {
 				// Start with peripheral.register name
 				regInfo.append(periph.getName()).append(".").append(reg.getName());
 				
-				// Try to get peripheral description using reflection if available
-				// TODO: retrieve peripheral description from SVD XML
-				String periphDesc = "";
+				// Add peripheral description first (if available)
+				String periphDesc = periph.getDescription();
 				String regDesc = reg.getDescription();
 				
-				// Build comment with peripheral description (if available) and register description
 				if (periphDesc != null && !periphDesc.trim().isEmpty() && 
 					regDesc != null && !regDesc.trim().isEmpty()) {
-					// Both descriptions available - format: "Peripheral Desc - Register Desc"
+					// Both descriptions available - format: "Peripheral Desc; Register Desc"
 					regInfo.append(" - ").append(periphDesc.trim())
-						   .append(" - ").append(regDesc.trim());
+						   .append("; ").append(regDesc.trim());
 				} else if (periphDesc != null && !periphDesc.trim().isEmpty()) {
 					// Only peripheral description
 					regInfo.append(" - ").append(periphDesc.trim());
@@ -813,29 +812,8 @@ public class SvdLoadTask extends Task {
 							// Check if this address matches any SVD register
 							String regInfo = findMatchingRegister(targetAddr, registerMap);
 							if (regInfo != null) {
-								// Add comment to the instruction
-								String existingComment = listing.getComment(CodeUnit.EOL_COMMENT, instruction.getAddress());
+								// Simply overwrite any existing comment with our SVD comment
 								String newComment = "SVD: " + regInfo;
-								
-								// Handle existing comments
-								if (preserveExistingComments && existingComment != null && !existingComment.isEmpty()) {
-									// Extract peripheral.register pattern from regInfo
-									String periphRegPattern = extractPeriphRegPattern(regInfo);
-									if (periphRegPattern != null && existingComment.contains("SVD: " + periphRegPattern)) {
-										// Replace existing SVD comment with the new enhanced one
-										// Remove old SVD comment pattern and add new one
-										String updatedComment = removeOldSvdComment(existingComment, periphRegPattern);
-										if (updatedComment.trim().isEmpty()) {
-											newComment = newComment; // Only SVD comment
-										} else {
-											newComment = updatedComment + "; " + newComment;
-										}
-									} else {
-										// No existing SVD comment for this register, append new one
-										newComment = existingComment + "; " + newComment;
-									}
-								}
-								
 								listing.setComment(instruction.getAddress(), CodeUnit.EOL_COMMENT, newComment);
 								commentsAdded++;
 							}
@@ -901,57 +879,4 @@ public class SvdLoadTask extends Task {
 		return null;
 	}
 	
-	/**
-	 * Extract peripheral.register pattern from regInfo string
-	 * @param regInfo The register info string (e.g., "GCLK.SYNCBUSY - Description...")
-	 * @return The peripheral.register pattern (e.g., "GCLK.SYNCBUSY")
-	 */
-	private String extractPeriphRegPattern(String regInfo) {
-		if (regInfo == null || regInfo.isEmpty()) {
-			return null;
-		}
-		
-		// Find the first " - " to extract the peripheral.register part
-		int dashIndex = regInfo.indexOf(" - ");
-		if (dashIndex > 0) {
-			return regInfo.substring(0, dashIndex);
-		}
-		
-		// If no dash found, check for the first space or bracket
-		int spaceIndex = regInfo.indexOf(" ");
-		if (spaceIndex > 0) {
-			return regInfo.substring(0, spaceIndex);
-		}
-		
-		return regInfo; // Return as-is if no separators found
-	}
-	
-	/**
-	 * Remove old SVD comment for a specific peripheral.register from existing comment
-	 * @param existingComment The existing comment that may contain old SVD info
-	 * @param periphRegPattern The peripheral.register pattern to remove (e.g., "GCLK.SYNCBUSY")
-	 * @return The comment with the old SVD entry removed
-	 */
-	private String removeOldSvdComment(String existingComment, String periphRegPattern) {
-		if (existingComment == null || existingComment.isEmpty() || periphRegPattern == null) {
-			return existingComment;
-		}
-		
-		// Split comment by semicolons to find individual comment parts
-		String[] commentParts = existingComment.split(";");
-		StringBuilder result = new StringBuilder();
-		
-		for (String part : commentParts) {
-			String trimmedPart = part.trim();
-			// Skip any SVD comment that contains our peripheral.register pattern
-			if (!trimmedPart.startsWith("SVD: " + periphRegPattern)) {
-				if (result.length() > 0) {
-					result.append("; ");
-				}
-				result.append(trimmedPart);
-			}
-		}
-		
-		return result.toString();
-	}
 }
