@@ -19,6 +19,7 @@ import java.io.File;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
@@ -201,7 +202,7 @@ public class SvdLoadTask extends Task {
 	/**
 	 * Find which peripheral contains the given address
 	 */
-	private SvdPeripheral findPeripheralForAddress(long address, Iterable<SvdPeripheral> peripherals) {
+	private SvdPeripheral findPeripheralForAddress(long address, List<SvdPeripheral> peripherals) {
 		for (SvdPeripheral periph : peripherals) {
 			// Check if address falls within any address block of this peripheral
 			for (SvdAddressBlock block : periph.getAddressBlocks()) {

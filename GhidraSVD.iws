@@ -5,7 +5,11 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="f2a23ea4-9a74-4d1b-abc5-e527c10f0f03" name="Changes" comment="">
+      <change beforePath="$PROJECT_DIR$/GhidraSVD.ipr" beforeDir="false" afterPath="$PROJECT_DIR$/GhidraSVD.ipr" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/GhidraSVD.iws" beforeDir="false" afterPath="$PROJECT_DIR$/GhidraSVD.iws" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/GhidraSVD.main.iml" beforeDir="false" afterPath="$PROJECT_DIR$/GhidraSVD.main.iml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/GhidraSVD.test.iml" beforeDir="false" afterPath="$PROJECT_DIR$/GhidraSVD.test.iml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/build.gradle" beforeDir="false" afterPath="$PROJECT_DIR$/build.gradle" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/main/java/svd/SvdLoadTask.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/svd/SvdLoadTask.java" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
@@ -82,6 +86,12 @@
               <path>
                 <item name="" type="6a2764b6:ExternalProjectsStructure$RootNode" />
                 <item name="GhidraSVD" type="f1a62948:ProjectNode" />
+                <item name="Tasks" type="e4a08cd1:TasksNode" />
+                <item name="build" type="c8890929:TasksNode$1" />
+              </path>
+              <path>
+                <item name="" type="6a2764b6:ExternalProjectsStructure$RootNode" />
+                <item name="GhidraSVD" type="f1a62948:ProjectNode" />
                 <item name="Run Configurations" type="7b0102dc:RunConfigurationsNode" />
               </path>
             </expand>
@@ -97,6 +107,9 @@
   <component name="ModuleEditorState">
     <option name="LAST_EDITED_MODULE_NAME" />
     <option name="LAST_EDITED_TAB_NAME" />
+  </component>
+  <component name="ProblemsViewState">
+    <option name="selectedTabId" value="CurrentFile" />
   </component>
   <component name="ProjectColorInfo">{
   &quot;associatedIndex&quot;: 6
@@ -118,12 +131,14 @@
   &quot;keyToString&quot;: {
     &quot;Gradle.GhidraSVD [buildExtension].executor&quot;: &quot;Run&quot;,
     &quot;Gradle.GhidraSVD [build].executor&quot;: &quot;Run&quot;,
+    &quot;Gradle.GhidraSVD [clean].executor&quot;: &quot;Run&quot;,
     &quot;Gradle.GhidraSVD [debugExtension].executor&quot;: &quot;Run&quot;,
     &quot;Gradle.GhidraSVD [debugGhidra].executor&quot;: &quot;Debug&quot;,
     &quot;Gradle.GhidraSVD [installExtension].executor&quot;: &quot;Run&quot;,
     &quot;ModuleVcsDetector.initialDetectionPerformed&quot;: &quot;true&quot;,
     &quot;Remote JVM Debug.GhidraSVD.executor&quot;: &quot;Debug&quot;,
     &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.TerminalTabsStorage.copyFrom.TerminalArrangementManager&quot;: &quot;true&quot;,
     &quot;RunOnceActivity.git.unshallow&quot;: &quot;true&quot;,
     &quot;git-widget-placeholder&quot;: &quot;main&quot;,
     &quot;last_opened_file_path&quot;: &quot;/Users/macrod/Documents/workspace/fiu/GhidraSVD&quot;,
@@ -239,6 +254,28 @@
       <RunAsTest>false</RunAsTest>
       <method v="2" />
     </configuration>
+    <configuration name="GhidraSVD [clean]" type="GradleRunConfiguration" factoryName="Gradle" temporary="true">
+      <ExternalSystemSettings>
+        <option name="executionName" />
+        <option name="externalProjectPath" value="$PROJECT_DIR$" />
+        <option name="externalSystemIdString" value="GRADLE" />
+        <option name="scriptParameters" />
+        <option name="taskDescriptions">
+          <list />
+        </option>
+        <option name="taskNames">
+          <list>
+            <option value="clean" />
+          </list>
+        </option>
+        <option name="vmOptions" />
+      </ExternalSystemSettings>
+      <ExternalSystemDebugServerProcess>true</ExternalSystemDebugServerProcess>
+      <ExternalSystemReattachDebugProcess>true</ExternalSystemReattachDebugProcess>
+      <DebugAllEnabled>false</DebugAllEnabled>
+      <RunAsTest>false</RunAsTest>
+      <method v="2" />
+    </configuration>
     <configuration name="GhidraSVD [debugExtension]" type="GradleRunConfiguration" factoryName="Gradle" temporary="true">
       <ExternalSystemSettings>
         <option name="executionName" />
@@ -251,28 +288,6 @@
         <option name="taskNames">
           <list>
             <option value="debugExtension" />
-          </list>
-        </option>
-        <option name="vmOptions" />
-      </ExternalSystemSettings>
-      <ExternalSystemDebugServerProcess>true</ExternalSystemDebugServerProcess>
-      <ExternalSystemReattachDebugProcess>true</ExternalSystemReattachDebugProcess>
-      <DebugAllEnabled>false</DebugAllEnabled>
-      <RunAsTest>false</RunAsTest>
-      <method v="2" />
-    </configuration>
-    <configuration name="GhidraSVD [debugGhidra]" type="GradleRunConfiguration" factoryName="Gradle" temporary="true">
-      <ExternalSystemSettings>
-        <option name="executionName" />
-        <option name="externalProjectPath" value="$PROJECT_DIR$" />
-        <option name="externalSystemIdString" value="GRADLE" />
-        <option name="scriptParameters" />
-        <option name="taskDescriptions">
-          <list />
-        </option>
-        <option name="taskNames">
-          <list>
-            <option value="debugGhidra" />
           </list>
         </option>
         <option name="vmOptions" />
@@ -344,20 +359,20 @@
       </method>
     </configuration>
     <list>
+      <item itemvalue="Gradle.GhidraSVD [clean]" />
       <item itemvalue="Gradle.GhidraSVD [build]" />
       <item itemvalue="Gradle.GhidraSVD [buildExtension]" />
       <item itemvalue="Gradle.GhidraSVD [debugExtension]" />
-      <item itemvalue="Gradle.GhidraSVD [debugGhidra]" />
       <item itemvalue="Gradle.GhidraSVD [installExtension]" />
       <item itemvalue="Remote JVM Debug.GhidraSVD" />
     </list>
     <recent_temporary>
       <list>
         <item itemvalue="Gradle.GhidraSVD [installExtension]" />
+        <item itemvalue="Gradle.GhidraSVD [build]" />
+        <item itemvalue="Gradle.GhidraSVD [clean]" />
         <item itemvalue="Gradle.GhidraSVD [buildExtension]" />
         <item itemvalue="Gradle.GhidraSVD [debugExtension]" />
-        <item itemvalue="Gradle.GhidraSVD [debugGhidra]" />
-        <item itemvalue="Gradle.GhidraSVD [build]" />
       </list>
     </recent_temporary>
   </component>
@@ -393,7 +408,10 @@
       <workItem from="1749061080237" duration="11901000" />
       <workItem from="1749073767762" duration="68000" />
       <workItem from="1749073843447" duration="573000" />
-      <workItem from="1749079687655" duration="12555000" />
+      <workItem from="1749079687655" duration="14437000" />
+      <workItem from="1749148328750" duration="217000" />
+      <workItem from="1749148563308" duration="1070000" />
+      <workItem from="1749149739166" duration="11000" />
     </task>
     <servers />
   </component>
@@ -402,17 +420,6 @@
   </component>
   <component name="VcsManagerConfiguration">
     <option name="MAKE_NEW_CHANGELIST_ACTIVE" value="true" />
-  </component>
-  <component name="XDebuggerManager">
-    <breakpoint-manager>
-      <breakpoints>
-        <line-breakpoint enabled="true" type="java-line">
-          <url>file://$PROJECT_DIR$/src/main/java/svd/SvdLoadTask.java</url>
-          <line>76</line>
-          <option name="timeStamp" value="1" />
-        </line-breakpoint>
-      </breakpoints>
-    </breakpoint-manager>
   </component>
   <component name="XSLT-Support.FileAssociations.UIState">
     <expand />

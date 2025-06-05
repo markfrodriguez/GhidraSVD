@@ -1457,6 +1457,5 @@
         <SOURCES />
       </library>
     </orderEntry>
-    <orderEntry type="library" name="Gradle: io.github.antoniovazquezblanco:svd-parser:v0.0.8" level="project" />
   </component>
 </module>

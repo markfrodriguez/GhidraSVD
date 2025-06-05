@@ -25,7 +25,8 @@ dependencies {
     compileOnly fileTree(dir: "${GHIDRA_INSTALL_DIR}/Ghidra/Framework", include: "**/*.jar")
     compileOnly fileTree(dir: "${GHIDRA_INSTALL_DIR}/Ghidra/Features", include: "**/*.jar")
     
-    implementation 'io.github.antoniovazquezblanco:svd-parser:v0.0.8'
+    // SVD parser is now included as source code instead of external dependency
+    // implementation 'io.github.antoniovazquezblanco:svd-parser:v0.0.8'
 }
 
 compileJava {
@@ -49,11 +50,11 @@ task buildExtension(type: Zip) {
             into 'lib'
         }
         
-        // Include SVD parser dependency JAR
-        from(configurations.runtimeClasspath) {
-            into 'lib'
-            include '**/svd-parser-*.jar'
-        }
+        // SVD parser is now compiled into the main JAR (no separate dependency needed)
+        // from(configurations.runtimeClasspath) {
+        //     into 'lib'
+        //     include '**/svd-parser-*.jar'
+        // }
         
         // Include source code ZIP in lib directory
         from('build/tmp') {

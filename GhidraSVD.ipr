@@ -1,8 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
-  <component name="ClojureProjectResolveSettings">
-    <currentScheme>IDE</currentScheme>
-  </component>
   <component name="CompilerConfiguration">
     <resourceExtensions>
       <entry name=".+\.(properties|xml|html|dtd|tld)" />
@@ -23,10 +20,6 @@
     <option name="SKIP_IMPORT_STATEMENTS" value="false" />
   </component>
   <component name="ExternalStorageConfigurationManager" enabled="true" />
-  <component name="FrameworkDetectionExcludesConfiguration">
-    <file type="web" url="file://$PROJECT_DIR$" />
-  </component>
-  <component name="GradleMigrationSettings" migrationVersion="1" />
   <component name="GradleSettings">
     <option name="linkedExternalProjectsSettings">
       <GradleProjectSettings>
@@ -81,21 +74,6 @@
   </component>
   <component name="SvnBranchConfigurationManager">
     <option name="mySupportsUserInfoFilter" value="true" />
-  </component>
-  <component name="VcsDirectoryMappings">
-    <mapping directory="$PROJECT_DIR$" vcs="Git" />
-  </component>
-  <component name="libraryTable">
-    <library name="Gradle: io.github.antoniovazquezblanco:svd-parser:v0.0.8" type="java-imported" external-system-id="GRADLE">
-      <properties groupId="io.github.antoniovazquezblanco" artifactId="svd-parser" version="v0.0.8" baseVersion="v0.0.8" />
-      <CLASSES>
-        <root url="jar://$USER_HOME$/.gradle/caches/modules-2/files-2.1/io.github.antoniovazquezblanco/svd-parser/v0.0.8/fe7d865e04dccb0bcba0c6973db787f277f1ac23/svd-parser-v0.0.8.jar!/" />
-      </CLASSES>
-      <JAVADOC />
-      <SOURCES>
-        <root url="jar://$USER_HOME$/.gradle/caches/modules-2/files-2.1/io.github.antoniovazquezblanco/svd-parser/v0.0.8/9fb5ec36c62f4ecd21dc30e1bd09925c93b11a74/svd-parser-v0.0.8-sources.jar!/" />
-      </SOURCES>
-    </library>
   </component>
   <component name="masterDetails">
     <states>

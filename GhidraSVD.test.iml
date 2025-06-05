@@ -7,7 +7,6 @@
     <orderEntry type="inheritedJdk" />
     <orderEntry type="sourceFolder" forTests="false" />
     <orderEntry type="module" module-name="GhidraSVD.main" />
-    <orderEntry type="library" name="Gradle: io.github.antoniovazquezblanco:svd-parser:v0.0.8" level="project" />
   </component>
   <component name="TestModuleProperties" production-module="GhidraSVD.main" />
 </module>
