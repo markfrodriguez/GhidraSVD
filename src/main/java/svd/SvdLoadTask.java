@@ -18,7 +18,9 @@ package svd;
 import java.io.File;
 import java.io.IOException;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
+import java.util.Set;
 
 import javax.xml.parsers.ParserConfigurationException;
 
@@ -83,15 +85,177 @@ public class SvdLoadTask extends Task {
 			return;
 		}
 
-		monitor.setMessage("Creating candidate blocks from SVD file...");
+		monitor.setMessage("Scanning program for peripheral usage...");
 		monitor.checkCancelled();
-		Map<Block, BlockInfo> blocks = createBlocksFromDevice(device);
+		Set<SvdPeripheral> usedPeripherals = findUsedPeripherals(device, monitor);
+		
+		monitor.setMessage("Creating blocks for " + usedPeripherals.size() + " used peripherals...");
+		monitor.checkCancelled();
+		Map<Block, BlockInfo> blocks = createBlocksFromUsedPeripherals(usedPeripherals);
 
 		for (BlockInfo blockInfo : blocks.values()) {
 			monitor.setMessage("Processing " + blockInfo.name + "...");
 			monitor.checkCancelled();
 			processBlock(blockInfo);
 		}
+		
+		Msg.info(getClass(), "SVD import complete. Created " + blocks.size() + " memory blocks for " + 
+				 usedPeripherals.size() + " used peripherals out of " + device.getPeripherals().size() + " total peripherals.");
+	}
+
+	/**
+	 * Scan the program to find which peripherals are actually referenced in the code
+	 */
+	private Set<SvdPeripheral> findUsedPeripherals(SvdDevice device, TaskMonitor monitor) throws CancelledException {
+		Set<SvdPeripheral> usedPeripherals = new HashSet<>();
+		Listing listing = mProgram.getListing();
+		
+		// Scan all instructions for memory references
+		var instructionIterator = listing.getInstructions(true);
+		int instructionsScanned = 0;
+		
+		while (instructionIterator.hasNext()) {
+			monitor.checkCancelled();
+			
+			if (++instructionsScanned % 1000 == 0) {
+				monitor.setMessage("Scanning instructions for peripheral usage... (" + instructionsScanned + " instructions)");
+			}
+			
+			var instruction = instructionIterator.next();
+			
+			// Check each operand for memory references
+			for (int i = 0; i < instruction.getNumOperands(); i++) {
+				var operandAddresses = instruction.getOperandReferences(i);
+				for (var ref : operandAddresses) {
+					if (ref.isMemoryReference()) {
+						long targetAddr = ref.getToAddress().getOffset();
+						
+						// Check if this address belongs to any peripheral
+						SvdPeripheral matchingPeriph = findPeripheralForAddress(targetAddr, device.getPeripherals());
+						if (matchingPeriph != null) {
+							usedPeripherals.add(matchingPeriph);
+						}
+					}
+				}
+			}
+			
+			// Also check immediate values that might be peripheral addresses
+			for (int i = 0; i < instruction.getNumOperands(); i++) {
+				Object[] opObjects = instruction.getOpObjects(i);
+				for (Object obj : opObjects) {
+					if (obj instanceof Number) {
+						long value = ((Number) obj).longValue();
+						SvdPeripheral matchingPeriph = findPeripheralForAddress(value, device.getPeripherals());
+						if (matchingPeriph != null) {
+							usedPeripherals.add(matchingPeriph);
+						}
+					}
+				}
+			}
+		}
+		
+		// Also scan data values that might contain peripheral addresses
+		var dataIterator = listing.getDefinedData(true);
+		int dataScanned = 0;
+		
+		while (dataIterator.hasNext()) {
+			monitor.checkCancelled();
+			
+			if (++dataScanned % 1000 == 0) {
+				monitor.setMessage("Scanning data for peripheral usage... (" + dataScanned + " data items)");
+			}
+			
+			var data = dataIterator.next();
+			
+			// Check if data contains addresses that might reference peripherals
+			if (data.hasStringValue()) {
+				continue; // Skip string data
+			}
+			
+			try {
+				// Check scalar values
+				if (data.getDataType().getLength() <= 8) { // 1, 2, 4, or 8 byte values
+					Object value = data.getValue();
+					if (value instanceof Number) {
+						long addr = ((Number) value).longValue();
+						SvdPeripheral matchingPeriph = findPeripheralForAddress(addr, device.getPeripherals());
+						if (matchingPeriph != null) {
+							usedPeripherals.add(matchingPeriph);
+						}
+					}
+				}
+			} catch (Exception e) {
+				// Ignore data that can't be interpreted as addresses
+			}
+		}
+		
+		monitor.setMessage("Found " + usedPeripherals.size() + " used peripherals out of " + device.getPeripherals().size() + " total");
+		return usedPeripherals;
+	}
+	
+	/**
+	 * Find which peripheral contains the given address
+	 */
+	private SvdPeripheral findPeripheralForAddress(long address, Iterable<SvdPeripheral> peripherals) {
+		for (SvdPeripheral periph : peripherals) {
+			// Check if address falls within any address block of this peripheral
+			for (SvdAddressBlock block : periph.getAddressBlocks()) {
+				long blockStart = periph.getBaseAddr() + block.getOffset();
+				long blockEnd = blockStart + block.getSize() - 1;
+				
+				if (address >= blockStart && address <= blockEnd) {
+					return periph;
+				}
+			}
+			
+			// Also check individual register addresses
+			for (SvdRegister reg : periph.getRegisters()) {
+				long regAddr = periph.getBaseAddr() + reg.getOffset();
+				// Check if address is within register boundaries (assuming 32-bit registers)
+				if (address >= regAddr && address < regAddr + Math.max(4, reg.getSize() / 8)) {
+					return periph;
+				}
+			}
+		}
+		return null;
+	}
+	
+	/**
+	 * Create blocks only from peripherals that are actually used in the program
+	 */
+	private Map<Block, BlockInfo> createBlocksFromUsedPeripherals(Set<SvdPeripheral> usedPeripherals) {
+		Map<Block, BlockInfo> blocks = new HashMap<Block, BlockInfo>();
+
+		// Convert only used peripherals to blocks...
+		for (SvdPeripheral periph : usedPeripherals) {
+			for (SvdAddressBlock block : periph.getAddressBlocks()) {
+				// Create a block..
+				Block b = new Block(periph.getBaseAddr() + block.getOffset(), block.getSize());
+
+				// Check if block exists...
+				BlockInfo bInfo = blocks.get(b);
+				if (bInfo == null)
+					bInfo = new BlockInfo();
+
+				// Fill in block info...
+				if (bInfo.block == null)
+					bInfo.block = b;
+				String name = getPeriphBlockName(periph, block);
+				if (bInfo.name == null)
+					bInfo.name = name;
+				else
+					bInfo.name += "/" + name;
+				bInfo.isReadable = true;
+				bInfo.isWritable = true;
+				bInfo.isExecutable = name.contains("RAM") || name.contains("memory");
+				bInfo.isVolatile = !bInfo.isExecutable;
+				bInfo.peripherals.add(periph);
+
+				// Save the data...
+				blocks.put(b, bInfo);
+			}
+		}
+		return blocks;
 	}
 
 	private Map<Block, BlockInfo> createBlocksFromDevice(SvdDevice device) {
