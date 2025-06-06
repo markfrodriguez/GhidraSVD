@@ -225,7 +225,7 @@ public class SvdPeripheral {
 	 */
 	private static SvdRegister createClusterRegister(SvdRegister originalRegister, String clusterName, 
 			String clusterDescription, long clusterOffset) {
-		// Create enhanced name: ClusterName_RegisterName (e.g., "I2CS_CTRLA", "USART_BAUD")
+		// Keep original register name (don't prefix with cluster name anymore for new format)
 		String enhancedName = clusterName + "_" + originalRegister.getName();
 		
 		// Create enhanced description that includes cluster context
@@ -241,8 +241,8 @@ public class SvdPeripheral {
 		// Adjust offset to include cluster offset
 		long adjustedOffset = originalRegister.getOffset() + clusterOffset;
 		
-		// Create new register with cluster context using the factory method, preserving fields
-		return SvdRegister.createRegister(enhancedName, enhancedDescription, adjustedOffset, originalRegister.getSize(), originalRegister.getFields());
+		// Create new register with cluster context using the cluster-aware factory method
+		return SvdRegister.createClusterRegister(enhancedName, enhancedDescription, adjustedOffset, originalRegister.getSize(), originalRegister.getFields(), clusterName);
 	}
 
 	public String toString() {

@@ -30,6 +30,7 @@ public class SvdRegister {
 	private Integer mSize;
 	private Integer mOffset;
 	private List<SvdField> mFields;
+	private String mClusterName; // Name of the cluster this register belongs to (if any)
 
 	/**
 	 * Create an SvdRegister from a DOM element.
@@ -90,15 +91,20 @@ public class SvdRegister {
 	}
 
 	private SvdRegister(String name, String description, int size, int offset) {
-		this(name, description, size, offset, new ArrayList<>());
+		this(name, description, size, offset, new ArrayList<>(), null);
 	}
 
 	private SvdRegister(String name, String description, int size, int offset, List<SvdField> fields) {
+		this(name, description, size, offset, fields, null);
+	}
+
+	private SvdRegister(String name, String description, int size, int offset, List<SvdField> fields, String clusterName) {
 		mName = name;
 		mDescription = description;
 		mSize = size;
 		mOffset = offset;
 		mFields = new ArrayList<>(fields); // Create a copy to avoid sharing references
+		mClusterName = clusterName;
 	}
 	
 	/**
@@ -111,7 +117,7 @@ public class SvdRegister {
 	 * @return A new SvdRegister object
 	 */
 	public static SvdRegister createRegister(String name, String description, long offset, int size) {
-		return new SvdRegister(name, description, size, (int) offset, new ArrayList<>());
+		return new SvdRegister(name, description, size, (int) offset, new ArrayList<>(), null);
 	}
 
 	/**
@@ -125,7 +131,22 @@ public class SvdRegister {
 	 * @return A new SvdRegister object
 	 */
 	public static SvdRegister createRegister(String name, String description, long offset, int size, List<SvdField> fields) {
-		return new SvdRegister(name, description, size, (int) offset, fields);
+		return new SvdRegister(name, description, size, (int) offset, fields, null);
+	}
+
+	/**
+	 * Create an SvdRegister with cluster information (for cluster support)
+	 * 
+	 * @param name        Register name
+	 * @param description Register description
+	 * @param offset      Register offset
+	 * @param size        Register size
+	 * @param fields      Register fields
+	 * @param clusterName Name of the cluster this register belongs to
+	 * @return A new SvdRegister object
+	 */
+	public static SvdRegister createClusterRegister(String name, String description, long offset, int size, List<SvdField> fields, String clusterName) {
+		return new SvdRegister(name, description, size, (int) offset, fields, clusterName);
 	}
 
 	/**
@@ -173,7 +194,25 @@ public class SvdRegister {
 		return mOffset;
 	}
 
+	/**
+	 * Get the cluster name this register belongs to.
+	 * 
+	 * @return The cluster name, or null if this register is not part of a cluster.
+	 */
+	public String getClusterName() {
+		return mClusterName;
+	}
+
+	/**
+	 * Check if this register belongs to a cluster.
+	 * 
+	 * @return True if this register is part of a cluster.
+	 */
+	public boolean isClusterRegister() {
+		return mClusterName != null && !mClusterName.trim().isEmpty();
+	}
+
 	public String toString() {
-		return "SvdRegister{name=" + mName + "}";
+		return "SvdRegister{name=" + mName + ", cluster=" + mClusterName + "}";
 	}
 }

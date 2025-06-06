@@ -639,8 +639,19 @@ public class SvdLoadTask extends Task {
 					// Build comprehensive comment with peripheral and register info
 					StringBuilder regInfo = new StringBuilder();
 					
-					// Start with peripheral.register name
-					regInfo.append(periph.getName()).append(".").append(reg.getName());
+					// Start with peripheral.register name, using cluster format if applicable
+					if (reg.isClusterRegister()) {
+						// Format: PERIPHERAL[CLUSTER].REGISTER (remove cluster prefix from register name)
+						String registerName = reg.getName();
+						String clusterPrefix = reg.getClusterName() + "_";
+						if (registerName.startsWith(clusterPrefix)) {
+							registerName = registerName.substring(clusterPrefix.length());
+						}
+						regInfo.append(periph.getName()).append("[").append(reg.getClusterName()).append("].").append(registerName);
+					} else {
+						// Format: PERIPHERAL.REGISTER
+						regInfo.append(periph.getName()).append(".").append(reg.getName());
+					}
 					
 					// Add peripheral description first (if available)
 					String periphDesc = periph.getDescription();
