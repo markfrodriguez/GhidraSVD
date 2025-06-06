@@ -41,9 +41,12 @@ import ghidra.program.model.data.ProgramBasedDataTypeManager;
 import ghidra.program.model.data.QWordDataType;
 import ghidra.program.model.data.StructureDataType;
 import ghidra.program.model.data.WordDataType;
+import ghidra.program.model.lang.Register;
 import ghidra.program.model.listing.CodeUnit;
+import ghidra.program.model.listing.Instruction;
 import ghidra.program.model.listing.Listing;
 import ghidra.program.model.listing.Program;
+import ghidra.program.model.scalar.Scalar;
 import ghidra.program.model.mem.Memory;
 import ghidra.program.model.mem.MemoryBlock;
 import ghidra.program.model.mem.MemoryConflictException;
@@ -736,8 +739,27 @@ public class SvdLoadTask extends Task {
 							}
 							
 							if (regInfo != null) {
+								// Determine operation type and enhance comment accordingly
+								boolean isWriteOperation = isWriteOperationToPeripheral(instruction, targetAddr);
+								String enhancedRegInfo = regInfo;
+								
+								if (isWriteOperation) {
+									// For write operations, try to extract and analyze the value being written
+									Long immediateValue = extractImmediateValueForWrite(instruction, targetAddr);
+									if (immediateValue != null) {
+										// Enhance with immediate value analysis: <== 0xXXXX
+										enhancedRegInfo = enhanceRegisterInfoWithImmediateValue(regInfo, targetAddr, immediateValue, registerMap, usedPeripherals);
+									} else {
+										// Write operation but couldn't determine value, still show write direction
+										enhancedRegInfo = regInfo.replaceAll("@[^\\s]*", "<== ?");
+									}
+								} else {
+									// For read operations, show read direction: ==>
+									enhancedRegInfo = regInfo.replaceAll("@[^\\s]*", "==>");
+								}
+								
 								// Simply overwrite any existing comment with our SVD comment
-								String newComment = "SVD: " + regInfo;
+								String newComment = "SVD: " + enhancedRegInfo;
 								listing.setComment(instruction.getAddress(), CodeUnit.EOL_COMMENT, newComment);
 								commentsAdded++;
 							}
@@ -1000,7 +1022,7 @@ public class SvdLoadTask extends Task {
 						if (enumDesc != null && !enumDesc.trim().isEmpty()) {
 							fieldAnalysis.append(" - ").append(enumDesc.trim());
 						}
-						fieldAnalysis.append(" (").append(fieldValue).append(")");
+						fieldAnalysis.append(" (0x").append(Long.toHexString(fieldValue).toUpperCase()).append(")");
 					} else {
 						// Field has enumerated values but current value doesn't match any
 						// Format: FIELDNAME:Unknown enum value (actual_value)
@@ -1008,7 +1030,7 @@ public class SvdLoadTask extends Task {
 						if (desc != null && !desc.trim().isEmpty()) {
 							fieldAnalysis.append(desc.trim()).append(" - ");
 						}
-						fieldAnalysis.append("Unknown enum value (").append(fieldValue).append(")");
+						fieldAnalysis.append("Unknown enum value (0x").append(Long.toHexString(fieldValue).toUpperCase()).append(")");
 					}
 				} else {
 					// No enumerated values - format: FIELDNAME:Description (actual_value)
@@ -1018,7 +1040,7 @@ public class SvdLoadTask extends Task {
 					} else {
 						fieldAnalysis.append("Field");
 					}
-					fieldAnalysis.append(" (").append(fieldValue).append(")");
+					fieldAnalysis.append(" (0x").append(Long.toHexString(fieldValue).toUpperCase()).append(")");
 				}
 				
 				first = false;
@@ -1072,6 +1094,370 @@ public class SvdLoadTask extends Task {
 		}
 		
 		return fieldInfo.toString();
+	}
+	
+	/**
+	 * Extract immediate value from write instructions to peripheral registers
+	 * @param instruction The instruction to analyze
+	 * @param targetAddr The target register address being written to
+	 * @return The immediate value being written, or null if not a write with immediate value
+	 */
+	private Long extractImmediateValueForWrite(Instruction instruction, long targetAddr) {
+		try {
+			String mnemonic = instruction.getMnemonicString().toLowerCase();
+			
+			// Check for write operations (store instructions)
+			if (mnemonic.startsWith("str") || mnemonic.startsWith("strh") || mnemonic.startsWith("strb")) {
+				// For store instructions, get the source operand (what's being stored)
+				if (instruction.getNumOperands() >= 2) {
+					Object sourceOperand = instruction.getOpObjects(0)[0]; // First operand is source register
+					
+					// Try to get the scalar value if it's an immediate or known register value
+					if (sourceOperand instanceof Scalar) {
+						return ((Scalar) sourceOperand).getValue();
+					}
+					
+					// For register operands, try to trace back to find immediate values
+					// This handles cases like: mov r2, #0x10000; str r2, [r3, #0x4]
+					return traceRegisterToImmediate(instruction, sourceOperand);
+				}
+			}
+			
+			// Check for immediate arithmetic operations on memory (like orr with immediate)
+			if (mnemonic.equals("orr") || mnemonic.equals("bic") || mnemonic.equals("and") || mnemonic.equals("eor")) {
+				// Check if this is a read-modify-write operation on our target address
+				if (instruction.getNumOperands() >= 3) {
+					Object immOperand = instruction.getOpObjects(2)[0]; // Third operand is usually immediate
+					if (immOperand instanceof Scalar) {
+						return ((Scalar) immOperand).getValue();
+					}
+				}
+			}
+			
+			return null;
+		} catch (Exception e) {
+			return null;
+		}
+	}
+	
+	/**
+	 * Trace a register back to find its immediate value from recent instructions
+	 * @param currentInstruction The current instruction
+	 * @param registerOperand The register operand to trace
+	 * @return The immediate value loaded into the register, or null if not found
+	 */
+	private Long traceRegisterToImmediate(Instruction currentInstruction, Object registerOperand) {
+		try {
+			if (!(registerOperand instanceof Register)) {
+				return null;
+			}
+			
+			Register targetRegister = (Register) registerOperand;
+			Listing listing = mProgram.getListing();
+			
+			// Look backwards through a few instructions to find immediate loads
+			Instruction prevInstruction = listing.getInstructionBefore(currentInstruction.getAddress());
+			int lookbackLimit = 5; // Don't look too far back
+			
+			while (prevInstruction != null && lookbackLimit > 0) {
+				String prevMnemonic = prevInstruction.getMnemonicString().toLowerCase();
+				
+				// Check for immediate load instructions (mov, movw, mov.w)
+				if ((prevMnemonic.equals("mov") || prevMnemonic.equals("movw") || prevMnemonic.equals("mov.w")) && 
+					prevInstruction.getNumOperands() >= 2) {
+					
+					// Check if destination register matches our target
+					Object destOperand = prevInstruction.getOpObjects(0)[0];
+					if (destOperand instanceof Register && destOperand.equals(targetRegister)) {
+						// Get the immediate value
+						Object srcOperand = prevInstruction.getOpObjects(1)[0];
+						if (srcOperand instanceof Scalar) {
+							return ((Scalar) srcOperand).getValue();
+						}
+					}
+				}
+				
+				// Check for memory load instructions (ldr)
+				if (prevMnemonic.equals("ldr") && prevInstruction.getNumOperands() >= 2) {
+					// Check if destination register matches our target
+					Object destOperand = prevInstruction.getOpObjects(0)[0];
+					if (destOperand instanceof Register && destOperand.equals(targetRegister)) {
+						// Get the memory address being loaded from
+						try {
+							// Check if this is a memory reference in the operand
+							var operandRefs = prevInstruction.getOperandReferences(1);
+							for (var ref : operandRefs) {
+								if (ref.isMemoryReference()) {
+									long memAddr = ref.getToAddress().getOffset();
+									// Try to read the value from that memory address
+									Long memValue = readValueFromMemory(memAddr);
+									if (memValue != null) {
+										return memValue;
+									}
+								}
+							}
+						} catch (Exception e) {
+							// Continue to next instruction if memory read fails
+						}
+					}
+				}
+				
+				// Check for arithmetic operations that modify the register (orr, bic, and, eor)
+				if ((prevMnemonic.equals("orr") || prevMnemonic.equals("bic") || prevMnemonic.equals("and") || prevMnemonic.equals("eor")) && 
+					prevInstruction.getNumOperands() >= 3) {
+					
+					// Check if destination register matches our target
+					Object destOperand = prevInstruction.getOpObjects(0)[0];
+					if (destOperand instanceof Register && destOperand.equals(targetRegister)) {
+						// Get the immediate value used in the operation
+						Object immOperand = prevInstruction.getOpObjects(2)[0]; // Third operand is usually immediate
+						if (immOperand instanceof Scalar) {
+							// For read-modify-write operations, return the immediate value being applied
+							// This represents what's being ORed/cleared/etc.
+							return ((Scalar) immOperand).getValue();
+						}
+					}
+				}
+				
+				// Also check for load immediate high (movt) instructions
+				if (prevMnemonic.equals("movt") && prevInstruction.getNumOperands() >= 2) {
+					Object destOperand = prevInstruction.getOpObjects(0)[0];
+					if (destOperand instanceof Register && destOperand.equals(targetRegister)) {
+						// For movt, we'd need to combine with previous movw, but for now just return what we can
+						Object srcOperand = prevInstruction.getOpObjects(1)[0];
+						if (srcOperand instanceof Scalar) {
+							return ((Scalar) srcOperand).getValue() << 16; // High 16 bits
+						}
+					}
+				}
+				
+				prevInstruction = listing.getInstructionBefore(prevInstruction.getAddress());
+				lookbackLimit--;
+			}
+			
+			return null;
+		} catch (Exception e) {
+			return null;
+		}
+	}
+	
+	/**
+	 * Enhance register information with immediate value analysis
+	 * @param originalRegInfo The original register information string
+	 * @param targetAddr The target register address
+	 * @param immediateValue The immediate value being written
+	 * @param registerMap Map of register addresses to register information
+	 * @param usedPeripherals Set of used peripherals to search for the register
+	 * @return Enhanced register information with immediate value field analysis
+	 */
+	private String enhanceRegisterInfoWithImmediateValue(String originalRegInfo, long targetAddr, Long immediateValue, Map<Long, String> registerMap, Set<SvdPeripheral> usedPeripherals) {
+		try {
+			// Find the register object for this address
+			SvdRegister register = findRegisterByAddress(targetAddr, usedPeripherals);
+			if (register == null || register.getFields().isEmpty()) {
+				// No register found or no fields to analyze, replace offset with immediate value
+				String result = originalRegInfo.replaceAll("@0x[0-9A-Fa-f]+", "<== 0x" + Long.toHexString(immediateValue).toUpperCase());
+				if (result.equals(originalRegInfo)) {
+					// Regex didn't match, try to replace any @[text] pattern
+					result = originalRegInfo.replaceAll("@[^\\s]*", "<== 0x" + Long.toHexString(immediateValue).toUpperCase());
+				}
+				return result;
+			}
+			
+			// Analyze the immediate value using the register's field definitions
+			String fieldAnalysis = analyzeRegisterFieldsWithValue(immediateValue, register);
+			
+			// Replace the existing field analysis with our immediate value analysis and offset with immediate value
+			// Original format: "REGISTER - Description [32-bit] {field analysis} @offset"
+			// New format: "REGISTER - Description [32-bit] {field analysis} <== immediateValue"
+			int fieldStart = originalRegInfo.indexOf('{');
+			int fieldEnd = originalRegInfo.indexOf('}');
+			int offsetStart = originalRegInfo.lastIndexOf('@');
+			
+			if (fieldStart != -1 && fieldEnd != -1 && offsetStart != -1) {
+				// Replace field analysis and change @offset to <== immediateValue
+				String beforeFields = originalRegInfo.substring(0, fieldStart + 1);
+				String afterOffset = " <== 0x" + Long.toHexString(immediateValue).toUpperCase();
+				return beforeFields + fieldAnalysis + "}" + afterOffset;
+			} else {
+				// Fallback: just append the analysis
+				return originalRegInfo + " <== 0x" + Long.toHexString(immediateValue).toUpperCase();
+			}
+			
+		} catch (Exception e) {
+			// Fallback to just showing the immediate value
+			String result = originalRegInfo.replaceAll("@0x[0-9A-Fa-f]+", "<== 0x" + Long.toHexString(immediateValue).toUpperCase());
+			if (result.equals(originalRegInfo)) {
+				// Regex didn't match, try to replace any @[text] pattern
+				result = originalRegInfo.replaceAll("@[^\\s]*", "<== 0x" + Long.toHexString(immediateValue).toUpperCase());
+			}
+			return result;
+		}
+	}
+	
+	/**
+	 * Find the SvdRegister object by its address
+	 * @param targetAddr The register address to find
+	 * @param usedPeripherals Set of used peripherals to search
+	 * @return The SvdRegister object, or null if not found
+	 */
+	private SvdRegister findRegisterByAddress(long targetAddr, Set<SvdPeripheral> usedPeripherals) {
+		// Search through the used peripherals to find the register
+		try {
+			for (SvdPeripheral periph : usedPeripherals) {
+				for (SvdRegister reg : periph.getRegisters()) {
+					long regAddress = periph.getBaseAddr() + reg.getOffset();
+					if (regAddress == targetAddr) {
+						return reg;
+					}
+				}
+			}
+		} catch (Exception e) {
+			// Ignore errors in this helper method
+		}
+		return null;
+	}
+	
+	/**
+	 * Create field analysis using a specific register value (for immediate value analysis)
+	 * @param registerValue The register value to analyze
+	 * @param register The SVD register with field definitions
+	 * @return String containing field analysis
+	 */
+	private String analyzeRegisterFieldsWithValue(long registerValue, SvdRegister register) {
+		// This is the same logic as in analyzeRegisterFields but using the provided value
+		StringBuilder fieldAnalysis = new StringBuilder();
+		boolean first = true;
+		
+		for (var field : register.getFields()) {
+			long fieldValue = field.extractValue(registerValue);
+			
+			if (!first) fieldAnalysis.append(", ");
+			
+			// Start with field name
+			fieldAnalysis.append(field.getName()).append(":");
+			
+			// Check for enumerated value match first
+			if (field.hasEnumeratedValues()) {
+				SvdEnumeratedValue enumValue = field.findEnumeratedValue(fieldValue);
+				if (enumValue != null) {
+					// Format: FIELDNAME:ENUM_NAME - enum description (actual_value)
+					fieldAnalysis.append(enumValue.getName());
+					String enumDesc = enumValue.getDescription();
+					if (enumDesc != null && !enumDesc.trim().isEmpty()) {
+						fieldAnalysis.append(" - ").append(enumDesc.trim());
+					}
+					fieldAnalysis.append(" (0x").append(Long.toHexString(fieldValue).toUpperCase()).append(")");
+				} else {
+					// Field has enumerated values but current value doesn't match any
+					String desc = field.getDescription();
+					if (desc != null && !desc.trim().isEmpty()) {
+						fieldAnalysis.append(desc.trim()).append(" - ");
+					}
+					fieldAnalysis.append("Unknown enum value (0x").append(Long.toHexString(fieldValue).toUpperCase()).append(")");
+				}
+			} else {
+				// No enumerated values - format: FIELDNAME:Description (actual_value)
+				String desc = field.getDescription();
+				if (desc != null && !desc.trim().isEmpty()) {
+					fieldAnalysis.append(desc.trim());
+				} else {
+					fieldAnalysis.append("Field");
+				}
+				fieldAnalysis.append(" (0x").append(Long.toHexString(fieldValue).toUpperCase()).append(")");
+			}
+			
+			first = false;
+		}
+		
+		return fieldAnalysis.toString();
+	}
+	
+	/**
+	 * Read a value from memory at the specified address
+	 * @param memAddr The memory address to read from
+	 * @return The value at that address, or null if read fails
+	 */
+	private Long readValueFromMemory(long memAddr) {
+		try {
+			AddressSpace addrSpace = mProgram.getAddressFactory().getDefaultAddressSpace();
+			Address addr = addrSpace.getAddress(memAddr);
+			
+			// Check if memory exists at this address
+			MemoryBlock memBlock = mMemory.getBlock(addr);
+			if (memBlock == null) {
+				return null;
+			}
+			
+			// Try to read different sizes, starting with 4 bytes (most common)
+			try {
+				// Try 32-bit read first
+				int value32 = mMemory.getInt(addr);
+				return (long) value32 & 0xFFFFFFFFL;
+			} catch (Exception e) {
+				try {
+					// Try 16-bit read
+					short value16 = mMemory.getShort(addr);
+					return (long) value16 & 0xFFFFL;
+				} catch (Exception e2) {
+					try {
+						// Try 8-bit read
+						byte value8 = mMemory.getByte(addr);
+						return (long) value8 & 0xFFL;
+					} catch (Exception e3) {
+						return null;
+					}
+				}
+			}
+		} catch (Exception e) {
+			return null;
+		}
+	}
+	
+	/**
+	 * Determine if an instruction is writing to a peripheral register
+	 * @param instruction The instruction to analyze
+	 * @param targetAddr The peripheral register address
+	 * @return True if this is a write operation, false if it's a read operation
+	 */
+	private boolean isWriteOperationToPeripheral(Instruction instruction, long targetAddr) {
+		try {
+			String mnemonic = instruction.getMnemonicString().toLowerCase();
+			
+			// Check for store (write) instructions
+			if (mnemonic.startsWith("str")) { // str, strh, strb
+				// For store instructions, check if the target address is in the destination operand
+				// Format: str rX, [destination]
+				if (instruction.getNumOperands() >= 2) {
+					var destOperandRefs = instruction.getOperandReferences(1); // Second operand is destination
+					for (var ref : destOperandRefs) {
+						if (ref.isMemoryReference() && ref.getToAddress().getOffset() == targetAddr) {
+							return true; // This is a write to our target address
+						}
+					}
+				}
+			}
+			
+			// Check for load (read) instructions
+			if (mnemonic.startsWith("ldr")) { // ldr, ldrh, ldrb
+				// For load instructions, check if the target address is in the source operand
+				// Format: ldr rX, [source]
+				if (instruction.getNumOperands() >= 2) {
+					var srcOperandRefs = instruction.getOperandReferences(1); // Second operand is source
+					for (var ref : srcOperandRefs) {
+						if (ref.isMemoryReference() && ref.getToAddress().getOffset() == targetAddr) {
+							return false; // This is a read from our target address
+						}
+					}
+				}
+			}
+			
+			// Default to read operation if we can't determine
+			return false;
+		} catch (Exception e) {
+			// Default to read operation on error
+			return false;
+		}
 	}
 	
 }
