@@ -59,6 +59,7 @@ import ghidra.util.task.Task;
 import ghidra.util.task.TaskMonitor;
 import io.svdparser.SvdAddressBlock;
 import io.svdparser.SvdDevice;
+import io.svdparser.SvdEnumeratedValue;
 import io.svdparser.SvdParserException;
 import io.svdparser.SvdPeripheral;
 import io.svdparser.SvdRegister;
@@ -989,49 +990,66 @@ public class SvdLoadTask extends Task {
 						registerValue = mMemory.getLong(addr);
 						break;
 					default:
-						// For unusual sizes, fall back to basic listing
-						return createBasicFieldListing(register);
+						// For unusual sizes, assume 4 bytes and try to read
+						registerValue = mMemory.getInt(addr) & 0xFFFFFFFFL;
+						break;
 				}
+				
+				// Debug: Log successful memory read
+				Msg.info(getClass(), "Successfully read register " + register.getName() + " at 0x" + 
+					String.format("%08X", regAddress) + " = 0x" + String.format("%08X", registerValue));
+				
 			} catch (Exception e) {
-				// Memory read failed - fall back to basic field listing
-				return createBasicFieldListing(register);
+				// Memory read failed - log the error and try to use 0 as default for peripheral registers
+				Msg.info(getClass(), "Memory read failed for register " + register.getName() + " at 0x" + 
+					String.format("%08X", regAddress) + ": " + e.getMessage() + " - using default value 0x0");
+				registerValue = 0L; // Use 0 as default for peripheral registers
 			}
 			
-			// Analyze each field with the actual register value
+			// Analyze each field with the actual register value - show ALL fields with their values
 			StringBuilder fieldAnalysis = new StringBuilder();
 			boolean first = true;
-			int activeFields = 0;
 			
 			for (var field : register.getFields()) {
 				long fieldValue = field.extractValue(registerValue);
-				boolean isSet = field.isSet(registerValue);
 				
-				// Only include fields that are set or have interesting values
-				if (isSet || fieldValue != 0) {
-					if (!first) fieldAnalysis.append(", ");
-					
-					fieldAnalysis.append(field.getName());
-					if (fieldValue != 0) {
-						fieldAnalysis.append("=0x").append(Long.toHexString(fieldValue).toUpperCase());
+				if (!first) fieldAnalysis.append(", ");
+				
+				// Start with field name
+				fieldAnalysis.append(field.getName()).append(":");
+				
+				// Check for enumerated value match first
+				if (field.hasEnumeratedValues()) {
+					SvdEnumeratedValue enumValue = field.findEnumeratedValue(fieldValue);
+					if (enumValue != null) {
+						// Format: FIELDNAME:ENUM_NAME - enum description (actual_value)
+						fieldAnalysis.append(enumValue.getName());
+						String enumDesc = enumValue.getDescription();
+						if (enumDesc != null && !enumDesc.trim().isEmpty()) {
+							fieldAnalysis.append(" - ").append(enumDesc.trim());
+						}
+						fieldAnalysis.append(" (").append(fieldValue).append(")");
+					} else {
+						// Field has enumerated values but current value doesn't match any
+						// Format: FIELDNAME:Unknown enum value (actual_value)
+						String desc = field.getDescription();
+						if (desc != null && !desc.trim().isEmpty()) {
+							fieldAnalysis.append(desc.trim()).append(" - ");
+						}
+						fieldAnalysis.append("Unknown enum value (").append(fieldValue).append(")");
 					}
-					
-					// Add field description if available and concise
+				} else {
+					// No enumerated values - format: FIELDNAME:Description (actual_value)
 					String desc = field.getDescription();
-					if (desc != null && !desc.trim().isEmpty() && desc.length() < 50) {
-						fieldAnalysis.append(":").append(desc.trim());
+					if (desc != null && !desc.trim().isEmpty()) {
+						fieldAnalysis.append(desc.trim());
+					} else {
+						fieldAnalysis.append("Field");
 					}
-					
-					first = false;
-					activeFields++;
+					fieldAnalysis.append(" (").append(fieldValue).append(")");
 				}
-			}
-			
-			// If no fields are active, provide a summary
-			if (activeFields == 0) {
-				fieldAnalysis.append("All fields clear (0x").append(Long.toHexString(registerValue).toUpperCase()).append(")");
-			} else if (activeFields < register.getFields().size()) {
-				// Show register value for context
-				fieldAnalysis.append(" [reg=0x").append(Long.toHexString(registerValue).toUpperCase()).append("]");
+				
+				first = false;
 			}
 			
 			return fieldAnalysis.toString();
@@ -1055,10 +1073,28 @@ public class SvdLoadTask extends Task {
 			if (!first) fieldInfo.append(", ");
 			fieldInfo.append(field.getName());
 			
-			// Add concise description if available
-			String desc = field.getDescription();
-			if (desc != null && !desc.trim().isEmpty() && desc.length() < 50) {
-				fieldInfo.append(":").append(desc.trim());
+			// Show enumerated values if available (abbreviated)
+			if (field.hasEnumeratedValues()) {
+				fieldInfo.append("[");
+				boolean firstEnum = true;
+				int enumCount = 0;
+				for (var enumValue : field.getEnumeratedValues()) {
+					if (enumCount >= 3) { // Limit to first 3 enum values
+						fieldInfo.append("...");
+						break;
+					}
+					if (!firstEnum) fieldInfo.append("|");
+					fieldInfo.append(enumValue.getName());
+					firstEnum = false;
+					enumCount++;
+				}
+				fieldInfo.append("]");
+			} else {
+				// Add concise description if available and no enumerated values
+				String desc = field.getDescription();
+				if (desc != null && !desc.trim().isEmpty() && desc.length() < 50) {
+					fieldInfo.append(":").append(desc.trim());
+				}
 			}
 			first = false;
 		}

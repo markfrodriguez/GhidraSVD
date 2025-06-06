@@ -28,6 +28,7 @@ public class SvdField {
 	private String mDescription;
 	private int mBitOffset;
 	private int mBitWidth;
+	private List<SvdEnumeratedValue> mEnumeratedValues;
 
 	/**
 	 * Create SvdField objects from a DOM element.
@@ -69,15 +70,29 @@ public class SvdField {
 			bitWidth = Integer.decode(bitWidthElement.getTextContent());
 		}
 
-		fields.add(new SvdField(name, description, bitOffset, bitWidth));
+		// Parse enumerated values (optional)
+		List<SvdEnumeratedValue> enumeratedValues = new ArrayList<>();
+		Element enumeratedValuesElement = Utils.getSingleFirstOrderChildElementByTagName(el, "enumeratedValues");
+		if (enumeratedValuesElement != null) {
+			for (Element enumValueElement : Utils.getFirstOrderChildElementsByTagName(enumeratedValuesElement, "enumeratedValue")) {
+				enumeratedValues.addAll(SvdEnumeratedValue.fromElement(enumValueElement));
+			}
+		}
+
+		fields.add(new SvdField(name, description, bitOffset, bitWidth, enumeratedValues));
 		return fields;
 	}
 
 	private SvdField(String name, String description, int bitOffset, int bitWidth) {
+		this(name, description, bitOffset, bitWidth, new ArrayList<>());
+	}
+
+	private SvdField(String name, String description, int bitOffset, int bitWidth, List<SvdEnumeratedValue> enumeratedValues) {
 		mName = name;
 		mDescription = description;
 		mBitOffset = bitOffset;
 		mBitWidth = bitWidth;
+		mEnumeratedValues = new ArrayList<>(enumeratedValues); // Create a copy to avoid sharing references
 	}
 
 	/**
@@ -137,6 +152,39 @@ public class SvdField {
 	 */
 	public boolean isSet(long registerValue) {
 		return extractValue(registerValue) != 0;
+	}
+
+	/**
+	 * Get the enumerated values for this field.
+	 * 
+	 * @return A list of SvdEnumeratedValue objects.
+	 */
+	public List<SvdEnumeratedValue> getEnumeratedValues() {
+		return mEnumeratedValues;
+	}
+
+	/**
+	 * Find the enumerated value that matches the given field value.
+	 * 
+	 * @param fieldValue The field value to match
+	 * @return The matching SvdEnumeratedValue, or null if no match found
+	 */
+	public SvdEnumeratedValue findEnumeratedValue(long fieldValue) {
+		for (SvdEnumeratedValue enumValue : mEnumeratedValues) {
+			if (enumValue.matches(fieldValue)) {
+				return enumValue;
+			}
+		}
+		return null;
+	}
+
+	/**
+	 * Check if this field has enumerated values defined.
+	 * 
+	 * @return True if enumerated values are defined
+	 */
+	public boolean hasEnumeratedValues() {
+		return !mEnumeratedValues.isEmpty();
 	}
 
 	public String toString() {
