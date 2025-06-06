@@ -631,17 +631,10 @@ public class SvdLoadTask extends Task {
 		Map<Long, String> peripheralBaseMap = new HashMap<>();
 		
 		for (SvdPeripheral periph : usedPeripherals) {
-			Msg.info(getClass(), "Processing peripheral: " + periph.getName() + " at base 0x" + String.format("%08X", periph.getBaseAddr()) + " with " + periph.getRegisters().size() + " registers");
-			
 			// For peripherals with detailed registers, add each register
 			if (periph.getRegisters().size() > 0) {
 				for (SvdRegister reg : periph.getRegisters()) {
 					long regAddress = periph.getBaseAddr() + reg.getOffset();
-					
-					// Debug RTC specifically
-					if (periph.getName().equals("RTC")) {
-						Msg.info(getClass(), "RTC Register: " + reg.getName() + " at offset 0x" + String.format("%X", reg.getOffset()) + " -> address 0x" + String.format("%08X", regAddress));
-					}
 					
 					// Build comprehensive comment with peripheral and register info
 					StringBuilder regInfo = new StringBuilder();
@@ -688,7 +681,6 @@ public class SvdLoadTask extends Task {
 				}
 			} else {
 				// For peripherals with no detailed registers, add base address mapping
-				Msg.info(getClass(), "Adding fallback mapping for " + periph.getName() + " (no detailed registers)");
 				StringBuilder periphInfo = new StringBuilder();
 				periphInfo.append(periph.getName()).append(" peripheral");
 				
@@ -704,21 +696,7 @@ public class SvdLoadTask extends Task {
 		}
 		
 		if (registerMap.isEmpty() && peripheralBaseMap.isEmpty()) {
-			Msg.info(getClass(), "No registers or peripheral bases found for comment creation");
 			return; // No registers to process
-		}
-		
-		Msg.info(getClass(), "Created register map with " + registerMap.size() + " registers and " + peripheralBaseMap.size() + " peripheral bases from " + usedPeripherals.size() + " peripherals");
-		// Debug: Print first few register addresses
-		int count = 0;
-		for (Map.Entry<Long, String> entry : registerMap.entrySet()) {
-			if (count++ < 5) {
-				Msg.info(getClass(), "Register: 0x" + String.format("%08X", entry.getKey()) + " -> " + entry.getValue());
-			}
-		}
-		// Debug: Print peripheral base addresses
-		for (Map.Entry<Long, String> entry : peripheralBaseMap.entrySet()) {
-			Msg.info(getClass(), "Peripheral base: 0x" + String.format("%08X", entry.getKey()) + " -> " + entry.getValue());
 		}
 		
 		// Scan instructions and add SVD comments
@@ -728,11 +706,9 @@ public class SvdLoadTask extends Task {
 		try {
 			// Iterate through all instructions in the program
 			var instructionIterator = listing.getInstructions(true);
-			int instructionsProcessed = 0;
 				
 			while (instructionIterator.hasNext()) {
 				var instruction = instructionIterator.next();
-				instructionsProcessed++;
 				
 				// Check each operand for memory references
 				for (int i = 0; i < instruction.getNumOperands(); i++) {
@@ -740,11 +716,6 @@ public class SvdLoadTask extends Task {
 					for (var ref : operandAddresses) {
 						if (ref.isMemoryReference()) {
 							long targetAddr = ref.getToAddress().getOffset();
-							
-							// Debug: Log every memory reference we check
-							if (instructionsProcessed <= 10) {
-								Msg.info(getClass(), "Checking memory ref: 0x" + String.format("%08X", targetAddr) + " at instruction " + instruction.getAddress());
-							}
 							
 							// Check if this address matches any SVD register
 							String regInfo = findMatchingRegister(targetAddr, registerMap);
@@ -754,9 +725,6 @@ public class SvdLoadTask extends Task {
 							}
 							
 							if (regInfo != null) {
-								// Debug: Log when we find a match
-								Msg.info(getClass(), "Found register/peripheral match: 0x" + String.format("%08X", targetAddr) + " -> " + regInfo + " at instruction " + instruction.getAddress());
-								
 								// Simply overwrite any existing comment with our SVD comment
 								String newComment = "SVD: " + regInfo;
 								listing.setComment(instruction.getAddress(), CodeUnit.EOL_COMMENT, newComment);
@@ -767,7 +735,6 @@ public class SvdLoadTask extends Task {
 				}
 			}
 			ok = true;
-			Msg.info(getClass(), "Added " + commentsAdded + " SVD comments for all used peripherals");
 		} catch (Exception e) {
 			Msg.error(getClass(), "Error adding SVD comments for all peripherals", e);
 		}
@@ -995,15 +962,9 @@ public class SvdLoadTask extends Task {
 						break;
 				}
 				
-				// Debug: Log successful memory read
-				Msg.info(getClass(), "Successfully read register " + register.getName() + " at 0x" + 
-					String.format("%08X", regAddress) + " = 0x" + String.format("%08X", registerValue));
-				
 			} catch (Exception e) {
-				// Memory read failed - log the error and try to use 0 as default for peripheral registers
-				Msg.info(getClass(), "Memory read failed for register " + register.getName() + " at 0x" + 
-					String.format("%08X", regAddress) + ": " + e.getMessage() + " - using default value 0x0");
-				registerValue = 0L; // Use 0 as default for peripheral registers
+				// Memory read failed - use 0 as default for peripheral registers
+				registerValue = 0L;
 			}
 			
 			// Analyze each field with the actual register value - show ALL fields with their values
