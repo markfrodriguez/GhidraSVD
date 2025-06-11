@@ -71,6 +71,34 @@ import io.svdparser.SvdRegister;
 import svd.MemoryUtils.MemRangeRelation;
 
 public class SvdLoadTask extends Task {
+	
+	// Constants for SVD comment format
+	private static final String SVD_COMMENT_PREFIX = "SVD: ";
+	private static final String PIPE_SEPARATOR = "|";
+	private static final String COMMA_SEPARATOR = ",";
+	private static final String COLON_SEPARATOR = ":";
+	private static final String NOT_AVAILABLE = "N/A";
+	
+	// Constants for operations
+	private static final String OPERATION_READ = "READ";
+	private static final String OPERATION_WRITE = "WRITE";
+	private static final String OPERATION_WRITE_UNKNOWN = "WRITE:UNKNOWN";
+	
+	// Constants for interrupt actions
+	private static final String INTERRUPT_ACTION_ENABLE = "ENABLE";
+	private static final String INTERRUPT_ACTION_DISABLE = "DISABLE";
+	private static final String INTERRUPT_ACTION_STATUS = "STATUS";
+	
+	// Constants for register patterns
+	private static final String[] CONTROL_REGISTER_NAMES = {"CTRL", "CTRLA", "CTRLB"};
+	private static final String[] INTERRUPT_REGISTER_PATTERNS = {"INTEN", "IRQ", "INT", "MASK", "ENABLE", "FLAG", "STATUS", "CTRL"};
+	private static final String[] ENABLE_REGISTER_PATTERNS = {"INTENSET", "ENABLE"};
+	private static final String[] DISABLE_REGISTER_PATTERNS = {"INTENCLR", "DISABLE"};
+	
+	private static final int DEFAULT_REGISTER_SIZE = 32;
+	private static final int MAX_INTERRUPTS_IN_COMMENT = 3;
+	private static final int REGISTER_LOOKBACK_LIMIT = 5;
+	
 	private File mSvdFile;
 	private Program mProgram;
 	private Memory mMemory;
@@ -390,14 +418,13 @@ public class SvdLoadTask extends Task {
 		} catch (LockException e) {
 			Msg.showError(this, null, getTaskTitle(), e, e);
 		} catch (MemoryConflictException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
+			Msg.error(getClass(), "Memory conflict while creating block " + blockInfo.name + 
+				" at address 0x" + String.format("%08X", blockInfo.block.getAddress()), e);
 		} catch (IllegalArgumentException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
+			Msg.error(getClass(), "Invalid argument while creating block " + blockInfo.name, e);
 		} catch (AddressOverflowException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
+			Msg.error(getClass(), "Address overflow while creating block " + blockInfo.name + 
+				" at address 0x" + String.format("%08X", blockInfo.block.getAddress()), e);
 		}
 		mProgram.endTransaction(transactionId, ok);
 	}
@@ -416,7 +443,8 @@ public class SvdLoadTask extends Task {
 				collidingMemoryBlock.setComment("Changed by Device Tree Blob");
 				ok = true;
 			} catch (IllegalArgumentException | LockException e) {
-				e.printStackTrace();
+				Msg.error(getClass(), "Error renaming memory block " + collidingMemoryBlock.getName() + 
+					" to " + blockInfo.name, e);
 			}
 			mProgram.endTransaction(transactionId, ok);
 		}
@@ -516,8 +544,8 @@ public class SvdLoadTask extends Task {
 			mSymTable.createLabel(addr, blockInfo.name.replace('/', '_'), namespace, SourceType.IMPORTED);
 			ok = true;
 		} catch (InvalidInputException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
+			Msg.error(getClass(), "Invalid input while creating symbol for block " + blockInfo.name + 
+				" at address 0x" + String.format("%08X", blockInfo.block.getAddress()), e);
 		}
 		mProgram.endTransaction(transactionId, ok);
 	}
@@ -533,8 +561,7 @@ public class SvdLoadTask extends Task {
 			namespace = mSymTable.createNameSpace(null, name, SourceType.IMPORTED);
 			ok = true;
 		} catch (DuplicateNameException | InvalidInputException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
+			Msg.error(getClass(), "Error creating namespace '" + name + "'", e);
 		}
 		mProgram.endTransaction(transactionId, ok);
 		return namespace;
@@ -551,7 +578,7 @@ public class SvdLoadTask extends Task {
 			dataTypeManager.addDataType(struct, DataTypeConflictHandler.REPLACE_HANDLER);
 			ok = true;
 		} catch (IllegalArgumentException e) {
-			e.printStackTrace();
+			Msg.error(getClass(), "Error adding data type for block " + blockInfo.name, e);
 		}
 		mProgram.endTransaction(transactionId, ok);
 
@@ -1258,111 +1285,277 @@ public class SvdLoadTask extends Task {
 			SvdPeripheral peripheral = findPeripheralByAddress(targetAddr, usedPeripherals);
 			
 			if (register == null || peripheral == null) {
-				// If we can't find the specific register/peripheral, create a basic comment from regInfo
-				// This shouldn't happen but provides a fallback
-				return "UNKNOWN.REGISTER|N/A|N/A|N/A|32|" + (isWrite ? "WRITE" : "READ") + "|N/A|N/A|N/A";
+				return buildFallbackComment(isWrite, "UNKNOWN.REGISTER");
 			}
 			
-			// 1. Register Path: PERIPHERAL[CLUSTER].REGISTER
-			StringBuilder regPath = new StringBuilder();
-			regPath.append(peripheral.getName());
-			
-			String activeClusterMode = null;
-			if (register.isClusterRegister()) {
-				// For cluster registers, try to determine active mode
-				var modeInfo = determineClusterModeInfoFromImmediateValue(peripheral, register, immediateValue);
-				if (modeInfo != null) {
-					activeClusterMode = modeInfo.name;
-					regPath.append("[").append(activeClusterMode).append("]");
-				} else {
-					regPath.append("[").append(register.getClusterName()).append("]");
-				}
-			}
-			
-			// Clean register name (remove cluster prefix if present)
-			String registerName = register.getName();
-			if (register.isClusterRegister()) {
-				String clusterPrefix = register.getClusterName() + "_";
-				if (registerName.startsWith(clusterPrefix)) {
-					registerName = registerName.substring(clusterPrefix.length());
-				}
-			}
-			regPath.append(".").append(registerName);
-			
-			// 2. Peripheral Description
-			String peripheralDesc = peripheral.getDescription();
-			if (peripheralDesc == null || peripheralDesc.trim().isEmpty()) {
-				peripheralDesc = "N/A";
-			}
-			
-			// 3. Cluster Description
-			String clusterDesc = "N/A";
-			if (register.isClusterRegister() && activeClusterMode != null) {
-				var modeInfo = determineClusterModeInfoFromImmediateValue(peripheral, register, immediateValue);
-				if (modeInfo != null && modeInfo.description != null && !modeInfo.description.trim().isEmpty()) {
-					clusterDesc = modeInfo.description.trim();
-				}
-			}
-			
-			// 4. Register Description
-			String registerDesc = register.getDescription();
-			if (registerDesc == null || registerDesc.trim().isEmpty()) {
-				registerDesc = "N/A";
-			}
-			
-			// 5. Register Size
-			String size = String.valueOf(register.getSize() > 0 ? register.getSize() : 32);
-			
-			// 6. Operation
-			String operation;
-			if (isWrite) {
-				if (immediateValue != null) {
-					operation = "WRITE:0x" + Long.toHexString(immediateValue).toUpperCase();
-				} else {
-					operation = "WRITE:UNKNOWN";
-				}
-			} else {
-				operation = "READ";
-			}
-			
-			// 7. Fields Analysis
-			String fields = generateFieldsAnalysis(register, immediateValue);
-			if (fields == null || fields.trim().isEmpty()) {
-				fields = "N/A";
-			}
-			
-			// 8. Interrupt Context
-			String interrupts = generateInterruptContext(targetAddr, immediateValue, usedPeripherals);
-			if (interrupts == null || interrupts.trim().isEmpty()) {
-				interrupts = "N/A";
-			}
-			
-			// 9. Mode Context
-			String modeContext = "N/A";
-			if (register.isClusterRegister() && activeClusterMode != null) {
-				var modeInfo = determineClusterModeInfoFromImmediateValue(peripheral, register, immediateValue);
-				if (modeInfo != null && modeInfo.description != null && !modeInfo.description.trim().isEmpty()) {
-					modeContext = modeInfo.description.trim();
-				}
-			}
+			// Build all components for the pipe-delimited format
+			String regPath = buildRegisterPath(peripheral, register, immediateValue);
+			String peripheralDesc = getDescriptionOrDefault(peripheral.getDescription());
+			String clusterDesc = buildClusterDescription(register, peripheral, immediateValue, null);
+			String registerDesc = getDescriptionOrDefault(register.getDescription());
+			String size = buildSizeString(register);
+			String operation = buildOperationString(isWrite, immediateValue);
+			String fields = buildFieldsString(register, immediateValue);
+			String interrupts = buildInterruptsString(targetAddr, immediateValue, usedPeripherals);
+			String modeContext = buildModeContextString(register, peripheral, immediateValue);
 			
 			// Construct final pipe-delimited format
-			return String.format("%s|%s|%s|%s|%s|%s|%s|%s|%s",
-				regPath.toString(),
-				peripheralDesc,
-				clusterDesc,
-				registerDesc,
-				size,
-				operation,
-				fields,
-				interrupts,
-				modeContext
-			);
+			return String.join(PIPE_SEPARATOR, regPath, peripheralDesc, clusterDesc, 
+				registerDesc, size, operation, fields, interrupts, modeContext);
 			
 		} catch (Exception e) {
-			// Even if there's an exception, return a basic format
-			return "ERROR.REGISTER|N/A|N/A|N/A|32|" + (isWrite ? "WRITE" : "READ") + "|N/A|N/A|N/A";
+			// Log error with context for debugging
+			Msg.warn(getClass(), "Error generating SVD comment for address 0x" + 
+				Long.toHexString(targetAddr).toUpperCase() + ": " + e.getMessage(), e);
+			return buildFallbackComment(isWrite, "ERROR.REGISTER");
 		}
+	}
+	
+	/**
+	 * Build register path component: PERIPHERAL[CLUSTER].REGISTER
+	 */
+	private String buildRegisterPath(SvdPeripheral peripheral, SvdRegister register, Long immediateValue) {
+		StringBuilder regPath = new StringBuilder();
+		regPath.append(peripheral.getName());
+		
+		if (register.isClusterRegister()) {
+			// For cluster registers, try to determine active mode
+			var modeInfo = determineClusterModeInfoFromImmediateValue(peripheral, register, immediateValue);
+			String clusterName = (modeInfo != null) ? modeInfo.name : register.getClusterName();
+			regPath.append("[").append(clusterName).append("]");
+		}
+		
+		// Clean register name (remove cluster prefix if present)
+		String registerName = cleanRegisterName(register);
+		regPath.append(".").append(registerName);
+		return regPath.toString();
+	}
+	
+	/**
+	 * Clean register name by removing cluster prefix if present
+	 */
+	private String cleanRegisterName(SvdRegister register) {
+		String registerName = register.getName();
+		if (register.isClusterRegister()) {
+			String clusterPrefix = register.getClusterName() + "_";
+			if (registerName.startsWith(clusterPrefix)) {
+				registerName = registerName.substring(clusterPrefix.length());
+			}
+		}
+		return registerName;
+	}
+	
+	/**
+	 * Build register size string
+	 */
+	private String buildSizeString(SvdRegister register) {
+		return String.valueOf(register.getSize() > 0 ? register.getSize() : DEFAULT_REGISTER_SIZE);
+	}
+	
+	/**
+	 * Build fields string with proper fallback
+	 */
+	private String buildFieldsString(SvdRegister register, Long immediateValue) {
+		String fields = generateFieldsAnalysis(register, immediateValue);
+		return (fields != null && !fields.trim().isEmpty()) ? fields : NOT_AVAILABLE;
+	}
+	
+	/**
+	 * Build interrupts string with proper fallback
+	 */
+	private String buildInterruptsString(long targetAddr, Long immediateValue, Set<SvdPeripheral> usedPeripherals) {
+		String interrupts = generateInterruptContext(targetAddr, immediateValue, usedPeripherals);
+		return (interrupts != null && !interrupts.trim().isEmpty()) ? interrupts : NOT_AVAILABLE;
+	}
+	
+	/**
+	 * Build mode context string
+	 */
+	private String buildModeContextString(SvdRegister register, SvdPeripheral peripheral, Long immediateValue) {
+		if (!register.isClusterRegister()) {
+			return NOT_AVAILABLE;
+		}
+		
+		var modeInfo = determineClusterModeInfoFromImmediateValue(peripheral, register, immediateValue);
+		if (modeInfo != null && modeInfo.description != null && !modeInfo.description.trim().isEmpty()) {
+			return modeInfo.description.trim();
+		}
+		return NOT_AVAILABLE;
+	}
+	
+	/**
+	 * Build fallback comment for error cases
+	 */
+	private String buildFallbackComment(boolean isWrite, String registerName) {
+		String operation = isWrite ? OPERATION_WRITE : OPERATION_READ;
+		return String.join(PIPE_SEPARATOR, registerName, NOT_AVAILABLE, NOT_AVAILABLE, 
+			NOT_AVAILABLE, String.valueOf(DEFAULT_REGISTER_SIZE), operation, 
+			NOT_AVAILABLE, NOT_AVAILABLE, NOT_AVAILABLE);
+	}
+	
+	/**
+	 * Build analysis string for a single field
+	 */
+	private String buildSingleFieldAnalysis(io.svdparser.SvdField field, Long registerValue) {
+		StringBuilder fieldAnalysis = new StringBuilder();
+		
+		// Field name
+		fieldAnalysis.append(field.getName()).append(COLON_SEPARATOR);
+		
+		// Bit offset
+		fieldAnalysis.append(field.getBitOffset()).append(COLON_SEPARATOR);
+		
+		// Bit width and value
+		fieldAnalysis.append(field.getBitWidth()).append("(");
+		String fieldValueStr = buildFieldValueString(field, registerValue);
+		fieldAnalysis.append(fieldValueStr).append(")").append(COLON_SEPARATOR);
+		
+		// Field description
+		String fieldDesc = getDescriptionOrDefault(field.getDescription());
+		if (fieldDesc.equals(NOT_AVAILABLE)) {
+			fieldDesc = "Field";
+		}
+		fieldAnalysis.append(fieldDesc);
+		
+		// Enumerated value description (if applicable and value is known)
+		String enumDesc = buildEnumeratedValueDescription(field, registerValue);
+		if (enumDesc != null) {
+			fieldAnalysis.append(COLON_SEPARATOR).append(enumDesc);
+		}
+		
+		return fieldAnalysis.toString();
+	}
+	
+	/**
+	 * Build field value string
+	 */
+	private String buildFieldValueString(io.svdparser.SvdField field, Long registerValue) {
+		if (registerValue != null) {
+			long fieldValue = field.extractValue(registerValue);
+			return "0x" + Long.toHexString(fieldValue).toUpperCase();
+		}
+		return "0x0"; // Default when value unknown
+	}
+	
+	/**
+	 * Build enumerated value description if applicable
+	 */
+	private String buildEnumeratedValueDescription(io.svdparser.SvdField field, Long registerValue) {
+		if (registerValue == null || !field.hasEnumeratedValues()) {
+			return null;
+		}
+		
+		long fieldValue = field.extractValue(registerValue);
+		SvdEnumeratedValue enumValue = field.findEnumeratedValue(fieldValue);
+		if (enumValue != null) {
+			String enumDesc = enumValue.getDescription();
+			if (enumDesc != null && !enumDesc.trim().isEmpty()) {
+				return enumDesc.trim();
+			}
+		}
+		return null;
+	}
+	
+	/**
+	 * Check if we have valid context for interrupt analysis
+	 */
+	private boolean isValidInterruptContext(SvdPeripheral peripheral, SvdRegister register, Long immediateValue) {
+		if (peripheral == null || register == null || peripheral.getInterrupts().isEmpty() || immediateValue == null) {
+			return false;
+		}
+		
+		// Check if this register name suggests it's interrupt-related
+		String regName = register.getName().toUpperCase();
+		for (String pattern : INTERRUPT_REGISTER_PATTERNS) {
+			if (regName.contains(pattern)) {
+				return true;
+			}
+		}
+		return false;
+	}
+	
+	/**
+	 * Determine interrupt action based on register name
+	 */
+	private String determineInterruptAction(String registerName) {
+		String regName = registerName.toUpperCase();
+		
+		for (String pattern : ENABLE_REGISTER_PATTERNS) {
+			if (regName.contains(pattern)) {
+				return INTERRUPT_ACTION_ENABLE;
+			}
+		}
+		
+		for (String pattern : DISABLE_REGISTER_PATTERNS) {
+			if (regName.contains(pattern)) {
+				return INTERRUPT_ACTION_DISABLE;
+			}
+		}
+		
+		return INTERRUPT_ACTION_STATUS;
+	}
+	
+	/**
+	 * Find interrupts affected by the immediate value
+	 */
+	private List<String> findAffectedInterrupts(SvdPeripheral peripheral, Long immediateValue, String action) {
+		List<String> affectedInterrupts = new ArrayList<>();
+		
+		// Check each bit in the immediate value
+		for (int bit = 0; bit < 32; bit++) {
+			if ((immediateValue & (1L << bit)) != 0) {
+				// This bit is set, find corresponding interrupt
+				for (SvdInterrupt interrupt : peripheral.getInterrupts()) {
+					if (interrupt.matchesBitPosition(bit)) {
+						// Format: ACTION:INTERRUPT_NAME:VECTOR_NUMBER
+						String interruptEntry = String.join(COLON_SEPARATOR, 
+							action, interrupt.getName(), String.valueOf(interrupt.getValue()));
+						affectedInterrupts.add(interruptEntry);
+						break;
+					}
+				}
+			}
+		}
+		
+		return affectedInterrupts;
+	}
+	
+	/**
+	 * Get description or return "N/A" if null/empty
+	 */
+	private String getDescriptionOrDefault(String description) {
+		return (description != null && !description.trim().isEmpty()) ? description.trim() : NOT_AVAILABLE;
+	}
+	
+	/**
+	 * Build cluster description component
+	 */
+	private String buildClusterDescription(SvdRegister register, SvdPeripheral peripheral, Long immediateValue, String activeClusterMode) {
+		if (!register.isClusterRegister()) {
+			return NOT_AVAILABLE;
+		}
+		
+		var modeInfo = determineClusterModeInfoFromImmediateValue(peripheral, register, immediateValue);
+		if (modeInfo != null && modeInfo.description != null && !modeInfo.description.trim().isEmpty()) {
+			return modeInfo.description.trim();
+		}
+		
+		return NOT_AVAILABLE;
+	}
+	
+	/**
+	 * Build operation string component
+	 */
+	private String buildOperationString(boolean isWrite, Long immediateValue) {
+		if (!isWrite) {
+			return OPERATION_READ;
+		}
+		
+		if (immediateValue != null) {
+			return OPERATION_WRITE + COLON_SEPARATOR + "0x" + Long.toHexString(immediateValue).toUpperCase();
+		}
+		
+		return OPERATION_WRITE_UNKNOWN;
 	}
 	
 	/**
@@ -1376,54 +1569,13 @@ public class SvdLoadTask extends Task {
 			return null;
 		}
 		
-		StringBuilder fieldAnalysis = new StringBuilder();
-		boolean first = true;
-		
+		List<String> fieldStrings = new ArrayList<>();
 		for (var field : register.getFields()) {
-			if (!first) fieldAnalysis.append(",");
-			
-			// Field name
-			fieldAnalysis.append(field.getName()).append(":");
-			
-			// Bit offset
-			fieldAnalysis.append(field.getBitOffset()).append(":");
-			
-			// Bit width  
-			fieldAnalysis.append(field.getBitWidth()).append("(");
-			
-			// Field value (if available)
-			if (registerValue != null) {
-				long fieldValue = field.extractValue(registerValue);
-				fieldAnalysis.append("0x").append(Long.toHexString(fieldValue).toUpperCase());
-			} else {
-				fieldAnalysis.append("0x0"); // Default when value unknown
-			}
-			fieldAnalysis.append("):");
-			
-			// Field description
-			String fieldDesc = field.getDescription();
-			if (fieldDesc != null && !fieldDesc.trim().isEmpty()) {
-				fieldAnalysis.append(fieldDesc.trim());
-			} else {
-				fieldAnalysis.append("Field");
-			}
-			
-			// Enumerated value description (if applicable and value is known)
-			if (registerValue != null && field.hasEnumeratedValues()) {
-				long fieldValue = field.extractValue(registerValue);
-				SvdEnumeratedValue enumValue = field.findEnumeratedValue(fieldValue);
-				if (enumValue != null) {
-					String enumDesc = enumValue.getDescription();
-					if (enumDesc != null && !enumDesc.trim().isEmpty()) {
-						fieldAnalysis.append(":").append(enumDesc.trim());
-					}
-				}
-			}
-			
-			first = false;
+			String fieldString = buildSingleFieldAnalysis(field, registerValue);
+			fieldStrings.add(fieldString);
 		}
 		
-		return fieldAnalysis.toString();
+		return String.join(COMMA_SEPARATOR, fieldStrings);
 	}
 	
 	/**
@@ -1436,79 +1588,31 @@ public class SvdLoadTask extends Task {
 	private String generateInterruptContext(long targetAddr, Long immediateValue, Set<SvdPeripheral> usedPeripherals) {
 		try {
 			// Find the peripheral and register for this address
-			SvdPeripheral peripheral = null;
-			SvdRegister register = null;
+			SvdPeripheral peripheral = findPeripheralByAddress(targetAddr, usedPeripherals);
+			SvdRegister register = findRegisterByAddress(targetAddr, usedPeripherals);
 			
-			for (SvdPeripheral periph : usedPeripherals) {
-				for (SvdRegister reg : periph.getRegisters()) {
-					long regAddress = periph.getBaseAddr() + reg.getOffset();
-					if (regAddress == targetAddr) {
-						peripheral = periph;
-						register = reg;
-						break;
-					}
-				}
-				if (peripheral != null) break;
-			}
-			
-			if (peripheral == null || register == null || peripheral.getInterrupts().isEmpty()) {
-				return null;
-			}
-			
-			// Check if this register name suggests it's interrupt-related
-			String regName = register.getName().toUpperCase();
-			boolean isInterruptRegister = regName.contains("INTEN") || regName.contains("IRQ") || 
-										 regName.contains("INT") || regName.contains("MASK") ||
-										 regName.contains("ENABLE") || regName.contains("FLAG") ||
-										 regName.contains("STATUS") || regName.contains("CTRL");
-			
-			if (!isInterruptRegister || immediateValue == null) {
+			if (!isValidInterruptContext(peripheral, register, immediateValue)) {
 				return null;
 			}
 			
 			// Determine interrupt action based on register name
-			String action;
-			if (regName.contains("INTENSET") || regName.contains("ENABLE")) {
-				action = "ENABLE";
-			} else if (regName.contains("INTENCLR") || regName.contains("DISABLE")) {
-				action = "DISABLE";
-			} else {
-				action = "STATUS";
-			}
+			String action = determineInterruptAction(register.getName());
 			
-			// Analyze which interrupts are affected by the immediate value
-			List<String> affectedInterrupts = new ArrayList<>();
-			
-			// Check each bit in the immediate value
-			for (int bit = 0; bit < 32; bit++) {
-				if ((immediateValue & (1L << bit)) != 0) {
-					// This bit is set, find corresponding interrupt
-					for (SvdInterrupt interrupt : peripheral.getInterrupts()) {
-						if (interrupt.matchesBitPosition(bit)) {
-							// Format: ACTION:INTERRUPT_NAME:VECTOR_NUMBER
-							String interruptName = interrupt.getName();
-							int vectorNumber = interrupt.getValue();
-							affectedInterrupts.add(action + ":" + interruptName + ":" + vectorNumber);
-							break;
-						}
-					}
-				}
-			}
+			// Find affected interrupts
+			List<String> affectedInterrupts = findAffectedInterrupts(peripheral, immediateValue, action);
 			
 			if (affectedInterrupts.isEmpty()) {
 				return null;
 			}
 			
-			// Join with commas (limit to first 3 to avoid overly long comments)
-			StringBuilder result = new StringBuilder();
-			for (int i = 0; i < Math.min(affectedInterrupts.size(), 3); i++) {
-				if (i > 0) result.append(",");
-				result.append(affectedInterrupts.get(i));
-			}
-			
-			return result.toString();
+			// Limit to first 3 to avoid overly long comments
+			return String.join(COMMA_SEPARATOR, 
+				affectedInterrupts.subList(0, Math.min(affectedInterrupts.size(), MAX_INTERRUPTS_IN_COMMENT)));
 			
 		} catch (Exception e) {
+			// Log error for debugging but don't fail SVD comment generation
+			Msg.debug(getClass(), "Error generating interrupt context for address 0x" + 
+				Long.toHexString(targetAddr).toUpperCase() + ": " + e.getMessage());
 			return null;
 		}
 	}
@@ -1531,7 +1635,9 @@ public class SvdLoadTask extends Task {
 				}
 			}
 		} catch (Exception e) {
-			// Ignore errors in this helper method
+			// Log error for debugging but don't fail the operation
+			Msg.debug(getClass(), "Error finding register by address 0x" + 
+				Long.toHexString(targetAddr).toUpperCase() + ": " + e.getMessage());
 		}
 		return null;
 	}
@@ -1553,7 +1659,9 @@ public class SvdLoadTask extends Task {
 				}
 			}
 		} catch (Exception e) {
-			// Ignore errors in this helper method
+			// Log error for debugging but don't fail the operation
+			Msg.debug(getClass(), "Error finding peripheral by address 0x" + 
+				Long.toHexString(targetAddr).toUpperCase() + ": " + e.getMessage());
 		}
 		return null;
 	}
