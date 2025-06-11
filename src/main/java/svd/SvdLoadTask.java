@@ -646,13 +646,18 @@ public class SvdLoadTask extends Task {
 					
 					// Start with peripheral.register name, using cluster format if applicable
 					if (reg.isClusterRegister()) {
-						// Format: PERIPHERAL[CLUSTER].REGISTER (remove cluster prefix from register name)
+						// Format: PERIPHERAL[ACTIVE_MODE].REGISTER (determine active mode dynamically)
 						String registerName = reg.getName();
 						String clusterPrefix = reg.getClusterName() + "_";
 						if (registerName.startsWith(clusterPrefix)) {
 							registerName = registerName.substring(clusterPrefix.length());
 						}
-						regInfo.append(periph.getName()).append("[").append(reg.getClusterName()).append("].").append(registerName);
+						
+						// Determine the active cluster mode based on MODE field value
+						String activeMode = determineActiveClusterMode(periph, usedPeripherals);
+						String displayMode = (activeMode != null) ? activeMode : reg.getClusterName();
+						
+						regInfo.append(periph.getName()).append("[").append(displayMode).append("].").append(registerName);
 					} else {
 						// Format: PERIPHERAL.REGISTER
 						regInfo.append(periph.getName()).append(".").append(reg.getName());
@@ -1254,8 +1259,10 @@ public class SvdLoadTask extends Task {
 	 */
 	private String enhanceRegisterInfoWithImmediateValue(String originalRegInfo, long targetAddr, Long immediateValue, Map<Long, String> registerMap, Set<SvdPeripheral> usedPeripherals) {
 		try {
-			// Find the register object for this address
+			// Find the register object and peripheral for this address
 			SvdRegister register = findRegisterByAddress(targetAddr, usedPeripherals);
+			SvdPeripheral peripheral = findPeripheralByAddress(targetAddr, usedPeripherals);
+			
 			if (register == null || register.getFields().isEmpty()) {
 				// No register found or no fields to analyze, replace offset with immediate value
 				String result = originalRegInfo.replaceAll("@0x[0-9A-Fa-f]+", "<== 0x" + Long.toHexString(immediateValue).toUpperCase());
@@ -1264,6 +1271,18 @@ public class SvdLoadTask extends Task {
 					result = originalRegInfo.replaceAll("@[^\\s]*", "<== 0x" + Long.toHexString(immediateValue).toUpperCase());
 				}
 				return result;
+			}
+			
+			// For cluster registers, check if we can determine the active mode from the immediate value
+			String enhancedRegInfo = originalRegInfo;
+			if (register.isClusterRegister() && peripheral != null) {
+				String newMode = determineClusterModeFromImmediateValue(peripheral, register, immediateValue);
+				if (newMode != null) {
+					// Replace the cluster name with the active mode name
+					String oldClusterPattern = "\\[" + register.getClusterName() + "\\]";
+					String newClusterPattern = "[" + newMode + "]";
+					enhancedRegInfo = enhancedRegInfo.replaceAll(oldClusterPattern, newClusterPattern);
+				}
 			}
 			
 			// Analyze the immediate value using the register's field definitions
@@ -1278,18 +1297,18 @@ public class SvdLoadTask extends Task {
 			// Replace the existing field analysis with our immediate value analysis and offset with immediate value
 			// Original format: "REGISTER - Description [32-bit] {field analysis} @offset"
 			// New format: "REGISTER - Description [32-bit] {field analysis} <== immediateValue"
-			int fieldStart = originalRegInfo.indexOf('{');
-			int fieldEnd = originalRegInfo.indexOf('}');
-			int offsetStart = originalRegInfo.lastIndexOf('@');
+			int fieldStart = enhancedRegInfo.indexOf('{');
+			int fieldEnd = enhancedRegInfo.indexOf('}');
+			int offsetStart = enhancedRegInfo.lastIndexOf('@');
 			
 			if (fieldStart != -1 && fieldEnd != -1 && offsetStart != -1) {
 				// Replace field analysis and change @offset to <== immediateValue
-				String beforeFields = originalRegInfo.substring(0, fieldStart + 1);
+				String beforeFields = enhancedRegInfo.substring(0, fieldStart + 1);
 				String afterOffset = " <== 0x" + Long.toHexString(immediateValue).toUpperCase();
 				return beforeFields + fieldAnalysis + "}" + afterOffset;
 			} else {
 				// Fallback: just append the analysis
-				return originalRegInfo + " <== 0x" + Long.toHexString(immediateValue).toUpperCase();
+				return enhancedRegInfo + " <== 0x" + Long.toHexString(immediateValue).toUpperCase();
 			}
 			
 		} catch (Exception e) {
@@ -1317,6 +1336,28 @@ public class SvdLoadTask extends Task {
 					long regAddress = periph.getBaseAddr() + reg.getOffset();
 					if (regAddress == targetAddr) {
 						return reg;
+					}
+				}
+			}
+		} catch (Exception e) {
+			// Ignore errors in this helper method
+		}
+		return null;
+	}
+	
+	/**
+	 * Find the SvdPeripheral object by register address
+	 * @param targetAddr The register address to find
+	 * @param usedPeripherals Set of used peripherals to search
+	 * @return The SvdPeripheral object, or null if not found
+	 */
+	private SvdPeripheral findPeripheralByAddress(long targetAddr, Set<SvdPeripheral> usedPeripherals) {
+		try {
+			for (SvdPeripheral periph : usedPeripherals) {
+				for (SvdRegister reg : periph.getRegisters()) {
+					long regAddress = periph.getBaseAddr() + reg.getOffset();
+					if (regAddress == targetAddr) {
+						return periph;
 					}
 				}
 			}
@@ -1551,6 +1592,159 @@ public class SvdLoadTask extends Task {
 			
 			return context.toString();
 			
+		} catch (Exception e) {
+			return null;
+		}
+	}
+	
+	/**
+	 * Determine the active cluster mode for a peripheral based on the MODE field value
+	 * in the control register (CTRL/CTRLA). This implements the generic pattern where
+	 * peripherals with clusters have a control register with a MODE field that determines
+	 * which cluster mode is active.
+	 * 
+	 * @param peripheral The peripheral to analyze
+	 * @param usedPeripherals Set of all used peripherals (for cross-referencing)
+	 * @return The active mode name from enumerated values, or null if cannot determine
+	 */
+	private String determineActiveClusterMode(SvdPeripheral peripheral, Set<SvdPeripheral> usedPeripherals) {
+		try {
+			// Look for control registers (CTRL, CTRLA, CTRLB) in this peripheral
+			SvdRegister controlRegister = findControlRegister(peripheral);
+			if (controlRegister == null) {
+				return null;
+			}
+			
+			// Find the MODE field in the control register
+			var modeField = findModeField(controlRegister);
+			if (modeField == null || !modeField.hasEnumeratedValues()) {
+				return null;
+			}
+			
+			// Read the current value of the control register to determine active mode
+			long controlRegisterAddress = peripheral.getBaseAddr() + controlRegister.getOffset();
+			Long currentValue = readCurrentRegisterValue(controlRegisterAddress);
+			if (currentValue == null) {
+				return null;
+			}
+			
+			// Extract the MODE field value from the register
+			long modeFieldValue = modeField.extractValue(currentValue);
+			
+			// Find the enumerated value that matches this mode
+			var activeEnumValue = modeField.findEnumeratedValue(modeFieldValue);
+			if (activeEnumValue != null) {
+				return activeEnumValue.getName();
+			}
+			
+			return null;
+		} catch (Exception e) {
+			// If anything fails, fall back to default cluster name
+			return null;
+		}
+	}
+	
+	/**
+	 * Find a control register (CTRL, CTRLA, CTRLB) in the given peripheral
+	 */
+	private SvdRegister findControlRegister(SvdPeripheral peripheral) {
+		for (SvdRegister reg : peripheral.getRegisters()) {
+			String regName = reg.getName().toUpperCase();
+			if (regName.equals("CTRL") || regName.equals("CTRLA") || regName.equals("CTRLB") ||
+				regName.endsWith("_CTRL") || regName.endsWith("_CTRLA") || regName.endsWith("_CTRLB")) {
+				return reg;
+			}
+		}
+		return null;
+	}
+	
+	/**
+	 * Find the MODE field in the given register
+	 */
+	private io.svdparser.SvdField findModeField(SvdRegister register) {
+		for (var field : register.getFields()) {
+			if (field.getName().toUpperCase().equals("MODE")) {
+				return field;
+			}
+		}
+		return null;
+	}
+	
+	/**
+	 * Determine the cluster mode being set based on an immediate value being written
+	 * to a control register. This is used when we're analyzing a write operation to
+	 * a control register and want to determine what mode is being activated.
+	 * 
+	 * @param peripheral The peripheral being written to
+	 * @param register The register being written to
+	 * @param immediateValue The value being written
+	 * @return The mode name from enumerated values, or null if cannot determine
+	 */
+	private String determineClusterModeFromImmediateValue(SvdPeripheral peripheral, SvdRegister register, long immediateValue) {
+		try {
+			// Check if this is a control register
+			String regName = register.getName().toUpperCase();
+			boolean isControlRegister = regName.equals("CTRL") || regName.equals("CTRLA") || regName.equals("CTRLB") ||
+									   regName.endsWith("_CTRL") || regName.endsWith("_CTRLA") || regName.endsWith("_CTRLB");
+			
+			if (!isControlRegister) {
+				return null;
+			}
+			
+			// Find the MODE field in this register
+			var modeField = findModeField(register);
+			if (modeField == null || !modeField.hasEnumeratedValues()) {
+				return null;
+			}
+			
+			// Extract the MODE field value from the immediate value being written
+			long modeFieldValue = modeField.extractValue(immediateValue);
+			
+			// Find the enumerated value that matches this mode
+			var activeEnumValue = modeField.findEnumeratedValue(modeFieldValue);
+			if (activeEnumValue != null) {
+				return activeEnumValue.getName();
+			}
+			
+			return null;
+		} catch (Exception e) {
+			return null;
+		}
+	}
+	
+	/**
+	 * Read the current value of a register from memory
+	 */
+	private Long readCurrentRegisterValue(long registerAddress) {
+		try {
+			AddressSpace addrSpace = mProgram.getAddressFactory().getDefaultAddressSpace();
+			Address addr = addrSpace.getAddress(registerAddress);
+			
+			// Check if memory exists at this address
+			MemoryBlock memBlock = mMemory.getBlock(addr);
+			if (memBlock == null) {
+				return null;
+			}
+			
+			// Try to read as 32-bit value (most common for control registers)
+			try {
+				int value32 = mMemory.getInt(addr);
+				return (long) value32 & 0xFFFFFFFFL;
+			} catch (Exception e) {
+				// Try 16-bit if 32-bit fails
+				try {
+					short value16 = mMemory.getShort(addr);
+					return (long) value16 & 0xFFFFL;
+				} catch (Exception e2) {
+					// Try 8-bit if 16-bit fails
+					try {
+						byte value8 = mMemory.getByte(addr);
+						return (long) value8 & 0xFFL;
+					} catch (Exception e3) {
+						return null;
+					}
+				}
+			}
 		} catch (Exception e) {
 			return null;
 		}
