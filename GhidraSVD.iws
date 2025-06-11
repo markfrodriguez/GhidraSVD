@@ -6,7 +6,6 @@
   <component name="ChangeListManager">
     <list default="true" id="f2a23ea4-9a74-4d1b-abc5-e527c10f0f03" name="Changes" comment="">
       <change beforePath="$PROJECT_DIR$/GhidraSVD.iws" beforeDir="false" afterPath="$PROJECT_DIR$/GhidraSVD.iws" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/svd/SvdLoadTask.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/svd/SvdLoadTask.java" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -398,7 +397,9 @@
       <workItem from="1749148563308" duration="1070000" />
       <workItem from="1749149739166" duration="203000" />
       <workItem from="1749149950122" duration="7866000" />
-      <workItem from="1749218122807" duration="2762000" />
+      <workItem from="1749218122807" duration="6640000" />
+      <workItem from="1749575719482" duration="13000" />
+      <workItem from="1749576238114" duration="730000" />
     </task>
     <servers />
   </component>

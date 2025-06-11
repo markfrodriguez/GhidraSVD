@@ -29,6 +29,7 @@ public class SvdPeripheral {
 	private Long mBaseAddr;
 	private List<SvdAddressBlock> mAddressBlocks;
 	private List<SvdRegister> mRegisters;
+	private List<SvdInterrupt> mInterrupts;
 
 	/**
 	 * Create an SvdPeripheral from a DOM element.
@@ -102,30 +103,38 @@ public class SvdPeripheral {
 			}
 		}
 
+		// Parse interrupts
+		List<SvdInterrupt> interrupts = new ArrayList<>();
+		for (Element e : Utils.getFirstOrderChildElementsByTagName(el, "interrupt")) {
+			interrupts.addAll(SvdInterrupt.fromElement(e));
+		}
+
 		ArrayList<SvdPeripheral> periph = new ArrayList<SvdPeripheral>();
 		for (Integer i = 0; i < dim; i++) {
 			Integer addrIncrement = i * dimIncrement;
 			String periphName = name.formatted(String.valueOf(i));
-			periph.add(new SvdPeripheral(derivedFrom, periphName, description, baseAddr + addrIncrement, addressBlocks, registers));
+			periph.add(new SvdPeripheral(derivedFrom, periphName, description, baseAddr + addrIncrement, addressBlocks, registers, interrupts));
 		}
 		return periph;
 	}
 
 	private SvdPeripheral(String name, String description, Long baseAddr, List<SvdAddressBlock> addressBlocks,
 			List<SvdRegister> registers) {
-		this(null, name, description, baseAddr, addressBlocks, registers);
+		this(null, name, description, baseAddr, addressBlocks, registers, new ArrayList<>());
 	}
 
 	private SvdPeripheral(SvdPeripheral derivedFrom, String name, String description, Long baseAddr, List<SvdAddressBlock> addressBlocks,
-			List<SvdRegister> registers) {
+			List<SvdRegister> registers, List<SvdInterrupt> interrupts) {
 		mName = name;
 		mDescription = description;
 		mBaseAddr = baseAddr;
 		mAddressBlocks = new ArrayList<SvdAddressBlock>();
 		mRegisters = new ArrayList<SvdRegister>();
+		mInterrupts = new ArrayList<SvdInterrupt>();
 		if (derivedFrom != null) {
 			mAddressBlocks.addAll(derivedFrom.getAddressBlocks());
 			mRegisters.addAll(derivedFrom.getRegisters());
+			mInterrupts.addAll(derivedFrom.getInterrupts());
 			// Inherit description from derived peripheral if current one is null
 			if (mDescription == null && derivedFrom.getDescription() != null) {
 				mDescription = derivedFrom.getDescription();
@@ -133,6 +142,7 @@ public class SvdPeripheral {
 		}
 		mAddressBlocks.addAll(addressBlocks);
 		mRegisters.addAll(registers);
+		mInterrupts.addAll(interrupts);
 	}
 
 	/**
@@ -178,6 +188,15 @@ public class SvdPeripheral {
 	 */
 	public List<SvdRegister> getRegisters() {
 		return mRegisters;
+	}
+
+	/**
+	 * Get a list of interrupts that the peripheral supports.
+	 * 
+	 * @return A list of SvdInterrupt objects.
+	 */
+	public List<SvdInterrupt> getInterrupts() {
+		return mInterrupts;
 	}
 
 	/**

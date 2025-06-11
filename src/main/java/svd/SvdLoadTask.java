@@ -17,6 +17,7 @@ package svd;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -63,6 +64,7 @@ import ghidra.util.task.TaskMonitor;
 import io.svdparser.SvdAddressBlock;
 import io.svdparser.SvdDevice;
 import io.svdparser.SvdEnumeratedValue;
+import io.svdparser.SvdInterrupt;
 import io.svdparser.SvdParserException;
 import io.svdparser.SvdPeripheral;
 import io.svdparser.SvdRegister;
@@ -745,7 +747,9 @@ public class SvdLoadTask extends Task {
 								
 								if (isWriteOperation) {
 									// For write operations, try to extract and analyze the value being written
+									Msg.info(getClass(), "DEBUG: Write operation detected for address 0x" + Long.toHexString(targetAddr));
 									Long immediateValue = extractImmediateValueForWrite(instruction, targetAddr);
+									Msg.info(getClass(), "DEBUG: extractImmediateValueForWrite returned: " + (immediateValue != null ? "0x" + Long.toHexString(immediateValue) : "null"));
 									if (immediateValue != null) {
 										// Enhance with immediate value analysis: <== 0xXXXX
 										enhancedRegInfo = enhanceRegisterInfoWithImmediateValue(regInfo, targetAddr, immediateValue, registerMap, usedPeripherals);
@@ -760,6 +764,7 @@ public class SvdLoadTask extends Task {
 								
 								// Simply overwrite any existing comment with our SVD comment
 								String newComment = "SVD: " + enhancedRegInfo;
+								Msg.info(getClass(), "DEBUG: Setting comment at " + instruction.getAddress() + ": '" + newComment + "'");
 								listing.setComment(instruction.getAddress(), CodeUnit.EOL_COMMENT, newComment);
 								commentsAdded++;
 							}
@@ -1252,6 +1257,7 @@ public class SvdLoadTask extends Task {
 	 */
 	private String enhanceRegisterInfoWithImmediateValue(String originalRegInfo, long targetAddr, Long immediateValue, Map<Long, String> registerMap, Set<SvdPeripheral> usedPeripherals) {
 		try {
+			Msg.info(getClass(), "DEBUG: enhanceRegisterInfoWithImmediateValue called for addr=0x" + Long.toHexString(targetAddr) + ", value=0x" + Long.toHexString(immediateValue));
 			// Find the register object for this address
 			SvdRegister register = findRegisterByAddress(targetAddr, usedPeripherals);
 			if (register == null || register.getFields().isEmpty()) {
@@ -1266,6 +1272,14 @@ public class SvdLoadTask extends Task {
 			
 			// Analyze the immediate value using the register's field definitions
 			String fieldAnalysis = analyzeRegisterFieldsWithValue(immediateValue, register);
+			
+			// Check if this is an interrupt-related register and add interrupt context
+			Msg.info(getClass(), "DEBUG: Calling analyzeInterruptContext for address 0x" + Long.toHexString(targetAddr) + " with value 0x" + Long.toHexString(immediateValue));
+			String interruptContext = analyzeInterruptContext(targetAddr, immediateValue, usedPeripherals);
+			Msg.info(getClass(), "DEBUG: analyzeInterruptContext returned: " + (interruptContext != null ? "'" + interruptContext + "'" : "null"));
+			if (interruptContext != null && !interruptContext.trim().isEmpty()) {
+				fieldAnalysis += " [" + interruptContext + "]";
+			}
 			
 			// Replace the existing field analysis with our immediate value analysis and offset with immediate value
 			// Original format: "REGISTER - Description [32-bit] {field analysis} @offset"
@@ -1457,6 +1471,107 @@ public class SvdLoadTask extends Task {
 		} catch (Exception e) {
 			// Default to read operation on error
 			return false;
+		}
+	}
+	
+	/**
+	 * Analyze interrupt context for interrupt-related register writes
+	 * @param targetAddr The register address being written to
+	 * @param immediateValue The value being written
+	 * @param usedPeripherals Set of used peripherals to search
+	 * @return Interrupt context string, or null if not interrupt-related
+	 */
+	private String analyzeInterruptContext(long targetAddr, Long immediateValue, Set<SvdPeripheral> usedPeripherals) {
+		try {
+			Msg.info(getClass(), "DEBUG: analyzeInterruptContext called with addr=0x" + Long.toHexString(targetAddr) + ", value=0x" + Long.toHexString(immediateValue) + ", peripherals=" + usedPeripherals.size());
+			
+			// Find the peripheral and register for this address
+			SvdPeripheral peripheral = null;
+			SvdRegister register = null;
+			
+			for (SvdPeripheral periph : usedPeripherals) {
+				for (SvdRegister reg : periph.getRegisters()) {
+					long regAddress = periph.getBaseAddr() + reg.getOffset();
+					if (regAddress == targetAddr) {
+						peripheral = periph;
+						register = reg;
+						Msg.info(getClass(), "DEBUG: Found matching peripheral=" + periph.getName() + ", register=" + reg.getName());
+						break;
+					}
+				}
+				if (peripheral != null) break;
+			}
+			
+			if (peripheral == null || register == null || peripheral.getInterrupts().isEmpty()) {
+				return null;
+			}
+			
+			// Check if this register name suggests it's interrupt-related
+			String regName = register.getName().toUpperCase();
+			boolean isInterruptRegister = regName.contains("INTEN") || regName.contains("IRQ") || 
+										 regName.contains("INT") || regName.contains("MASK") ||
+										 regName.contains("ENABLE") || regName.contains("FLAG") ||
+										 regName.contains("STATUS") || regName.contains("CTRL");
+			
+			// Debug for EIC specifically
+			if (peripheral.getName().equals("EIC")) {
+				Msg.info(getClass(), "DEBUG EIC: Found EIC peripheral, register " + regName + ", isInterruptRegister=" + isInterruptRegister + ", interrupts=" + peripheral.getInterrupts().size());
+			}
+			
+			if (!isInterruptRegister) {
+				return null;
+			}
+			
+			// Analyze which interrupts are affected by the immediate value
+			List<String> affectedInterrupts = new ArrayList<>();
+			
+			// Check each bit in the immediate value
+			for (int bit = 0; bit < 32; bit++) {
+				if ((immediateValue & (1L << bit)) != 0) {
+					// This bit is set, find corresponding interrupt
+					if (peripheral.getName().equals("EIC")) {
+						Msg.info(getClass(), "DEBUG EIC: Bit " + bit + " is set, checking " + peripheral.getInterrupts().size() + " interrupts");
+					}
+					for (SvdInterrupt interrupt : peripheral.getInterrupts()) {
+						if (interrupt.matchesBitPosition(bit)) {
+							if (peripheral.getName().equals("EIC")) {
+								Msg.info(getClass(), "DEBUG EIC: Found matching interrupt " + interrupt.getName() + " for bit " + bit);
+							}
+							affectedInterrupts.add(interrupt.getFormattedInfo());
+							break;
+						}
+					}
+				}
+			}
+			
+			if (affectedInterrupts.isEmpty()) {
+				return null;
+			}
+			
+			// Format the interrupt context
+			StringBuilder context = new StringBuilder();
+			if (regName.contains("INTENSET") || regName.contains("ENABLE")) {
+				context.append("Enabling IRQ: ");
+			} else if (regName.contains("INTENCLR") || regName.contains("DISABLE")) {
+				context.append("Disabling IRQ: ");
+			} else {
+				context.append("IRQ: ");
+			}
+			
+			// Add interrupt names
+			for (int i = 0; i < affectedInterrupts.size(); i++) {
+				if (i > 0) context.append(", ");
+				context.append(affectedInterrupts.get(i));
+				if (i >= 2) { // Limit to first 3 interrupts
+					context.append("...");
+					break;
+				}
+			}
+			
+			return context.toString();
+			
+		} catch (Exception e) {
+			return null;
 		}
 	}
 	
