@@ -75,7 +75,7 @@ public class SvdLoadTask extends Task {
 	// Constants for SVD comment format
 	private static final String SVD_COMMENT_PREFIX = "SVD: ";
 	private static final String PIPE_SEPARATOR = "|";
-	private static final String COMMA_SEPARATOR = ",";
+	private static final String FIELD_SEPARATOR = "^";  // Changed from comma to caret
 	private static final String COLON_SEPARATOR = ":";
 	private static final String NOT_AVAILABLE = "N/A";
 	
@@ -1280,12 +1280,31 @@ public class SvdLoadTask extends Task {
 	 */
 	private String generateNewSvdComment(long targetAddr, Long immediateValue, Set<SvdPeripheral> usedPeripherals, boolean isWrite) {
 		try {
+			// Add debug logging for address lookup
+			Msg.debug(getClass(), "Generating SVD comment for address 0x" + Long.toHexString(targetAddr).toUpperCase() + 
+				" with " + usedPeripherals.size() + " available peripherals");
+			
 			// Find the register object and peripheral for this address
 			SvdRegister register = findRegisterByAddress(targetAddr, usedPeripherals);
 			SvdPeripheral peripheral = findPeripheralByAddress(targetAddr, usedPeripherals);
 			
-			if (register == null || peripheral == null) {
-				return buildFallbackComment(isWrite, "UNKNOWN.REGISTER");
+			// Debug logging for lookup results
+			if (register == null && peripheral == null) {
+				Msg.warn(getClass(), "No register or peripheral found for address 0x" + 
+					Long.toHexString(targetAddr).toUpperCase() + " - falling back to ERROR.REGISTER");
+				// Add detailed debug info about available peripherals
+				logAvailablePeripherals(targetAddr, usedPeripherals);
+				return buildFallbackComment(isWrite, "ERROR.REGISTER");
+			} else if (register == null) {
+				Msg.warn(getClass(), "No register found for address 0x" + 
+					Long.toHexString(targetAddr).toUpperCase() + " but peripheral found: " + 
+					(peripheral != null ? peripheral.getName() : "null"));
+				return buildFallbackComment(isWrite, "ERROR.REGISTER");
+			} else if (peripheral == null) {
+				Msg.warn(getClass(), "No peripheral found for address 0x" + 
+					Long.toHexString(targetAddr).toUpperCase() + " but register found: " + 
+					(register != null ? register.getName() : "null"));
+				return buildFallbackComment(isWrite, "ERROR.REGISTER");
 			}
 			
 			// Build all components for the pipe-delimited format
@@ -1320,7 +1339,10 @@ public class SvdLoadTask extends Task {
 		
 		if (register.isClusterRegister()) {
 			// For cluster registers, try to determine active mode
-			var modeInfo = determineClusterModeInfoFromImmediateValue(peripheral, register, immediateValue);
+			ModeInfo modeInfo = null;
+			if (immediateValue != null) {
+				modeInfo = determineClusterModeInfoFromImmediateValue(peripheral, register, immediateValue.longValue());
+			}
 			String clusterName = (modeInfo != null) ? modeInfo.name : register.getClusterName();
 			regPath.append("[").append(clusterName).append("]");
 		}
@@ -1376,7 +1398,10 @@ public class SvdLoadTask extends Task {
 			return NOT_AVAILABLE;
 		}
 		
-		var modeInfo = determineClusterModeInfoFromImmediateValue(peripheral, register, immediateValue);
+		ModeInfo modeInfo = null;
+		if (immediateValue != null) {
+			modeInfo = determineClusterModeInfoFromImmediateValue(peripheral, register, immediateValue.longValue());
+		}
 		if (modeInfo != null && modeInfo.description != null && !modeInfo.description.trim().isEmpty()) {
 			return modeInfo.description.trim();
 		}
@@ -1521,6 +1546,51 @@ public class SvdLoadTask extends Task {
 	}
 	
 	/**
+	 * Log detailed information about available peripherals for debugging address lookup failures
+	 */
+	private void logAvailablePeripherals(long targetAddr, Set<SvdPeripheral> usedPeripherals) {
+		Msg.debug(getClass(), "Available peripherals for address lookup:");
+		for (SvdPeripheral periph : usedPeripherals) {
+			Msg.debug(getClass(), "  Peripheral: " + periph.getName() + " @ base 0x" + 
+				Long.toHexString(periph.getBaseAddr()).toUpperCase());
+			
+			// Show first few registers for this peripheral
+			int regCount = 0;
+			for (SvdRegister reg : periph.getRegisters()) {
+				if (regCount >= 3) { // Limit to first 3 registers per peripheral to avoid log spam
+					if (periph.getRegisters().size() > 3) {
+						Msg.debug(getClass(), "    ... and " + (periph.getRegisters().size() - 3) + " more registers");
+					}
+					break;
+				}
+				long regAddr = periph.getBaseAddr() + reg.getOffset();
+				Msg.debug(getClass(), "    Register: " + reg.getName() + " @ 0x" + 
+					Long.toHexString(regAddr).toUpperCase() + " (offset 0x" + 
+					Long.toHexString(reg.getOffset()).toUpperCase() + ")");
+				regCount++;
+			}
+		}
+		
+		// Calculate the closest register addresses to help understand the miss
+		long closestDistance = Long.MAX_VALUE;
+		String closestInfo = "none";
+		for (SvdPeripheral periph : usedPeripherals) {
+			for (SvdRegister reg : periph.getRegisters()) {
+				long regAddr = periph.getBaseAddr() + reg.getOffset();
+				long distance = Math.abs(regAddr - targetAddr);
+				if (distance < closestDistance) {
+					closestDistance = distance;
+					closestInfo = periph.getName() + "." + reg.getName() + " @ 0x" + 
+						Long.toHexString(regAddr).toUpperCase() + " (distance: 0x" + 
+						Long.toHexString(distance).toUpperCase() + ")";
+				}
+			}
+		}
+		Msg.debug(getClass(), "Closest register to target 0x" + Long.toHexString(targetAddr).toUpperCase() + 
+			" is: " + closestInfo);
+	}
+	
+	/**
 	 * Get description or return "N/A" if null/empty
 	 */
 	private String getDescriptionOrDefault(String description) {
@@ -1535,7 +1605,10 @@ public class SvdLoadTask extends Task {
 			return NOT_AVAILABLE;
 		}
 		
-		var modeInfo = determineClusterModeInfoFromImmediateValue(peripheral, register, immediateValue);
+		ModeInfo modeInfo = null;
+		if (immediateValue != null) {
+			modeInfo = determineClusterModeInfoFromImmediateValue(peripheral, register, immediateValue.longValue());
+		}
 		if (modeInfo != null && modeInfo.description != null && !modeInfo.description.trim().isEmpty()) {
 			return modeInfo.description.trim();
 		}
@@ -1575,7 +1648,7 @@ public class SvdLoadTask extends Task {
 			fieldStrings.add(fieldString);
 		}
 		
-		return String.join(COMMA_SEPARATOR, fieldStrings);
+		return String.join(FIELD_SEPARATOR, fieldStrings);
 	}
 	
 	/**
@@ -1606,7 +1679,7 @@ public class SvdLoadTask extends Task {
 			}
 			
 			// Limit to first 3 to avoid overly long comments
-			return String.join(COMMA_SEPARATOR, 
+			return String.join(FIELD_SEPARATOR, 
 				affectedInterrupts.subList(0, Math.min(affectedInterrupts.size(), MAX_INTERRUPTS_IN_COMMENT)));
 			
 		} catch (Exception e) {
@@ -1626,18 +1699,35 @@ public class SvdLoadTask extends Task {
 	private SvdRegister findRegisterByAddress(long targetAddr, Set<SvdPeripheral> usedPeripherals) {
 		// Search through the used peripherals to find the register
 		try {
+			Msg.debug(getClass(), "Looking for register at address 0x" + Long.toHexString(targetAddr).toUpperCase());
+			
+			int totalRegistersChecked = 0;
 			for (SvdPeripheral periph : usedPeripherals) {
 				for (SvdRegister reg : periph.getRegisters()) {
+					totalRegistersChecked++;
 					long regAddress = periph.getBaseAddr() + reg.getOffset();
+					
+					// Log first few address comparisons for debugging
+					if (totalRegistersChecked <= 5) {
+						Msg.debug(getClass(), "  Checking " + periph.getName() + "." + reg.getName() + 
+							" @ 0x" + Long.toHexString(regAddress).toUpperCase() + 
+							" (base: 0x" + Long.toHexString(periph.getBaseAddr()).toUpperCase() + 
+							" + offset: 0x" + Long.toHexString(reg.getOffset()).toUpperCase() + ")");
+					}
+					
 					if (regAddress == targetAddr) {
+						Msg.debug(getClass(), "Found register match: " + periph.getName() + "." + reg.getName() + 
+							" @ 0x" + Long.toHexString(regAddress).toUpperCase());
 						return reg;
 					}
 				}
 			}
+			
+			Msg.debug(getClass(), "No register found after checking " + totalRegistersChecked + " registers");
 		} catch (Exception e) {
 			// Log error for debugging but don't fail the operation
-			Msg.debug(getClass(), "Error finding register by address 0x" + 
-				Long.toHexString(targetAddr).toUpperCase() + ": " + e.getMessage());
+			Msg.warn(getClass(), "Exception while finding register by address 0x" + 
+				Long.toHexString(targetAddr).toUpperCase() + ": " + e.getMessage(), e);
 		}
 		return null;
 	}
@@ -1650,18 +1740,24 @@ public class SvdLoadTask extends Task {
 	 */
 	private SvdPeripheral findPeripheralByAddress(long targetAddr, Set<SvdPeripheral> usedPeripherals) {
 		try {
+			Msg.debug(getClass(), "Looking for peripheral containing address 0x" + Long.toHexString(targetAddr).toUpperCase());
+			
 			for (SvdPeripheral periph : usedPeripherals) {
 				for (SvdRegister reg : periph.getRegisters()) {
 					long regAddress = periph.getBaseAddr() + reg.getOffset();
 					if (regAddress == targetAddr) {
+						Msg.debug(getClass(), "Found peripheral match: " + periph.getName() + 
+							" containing register " + reg.getName() + " @ 0x" + Long.toHexString(regAddress).toUpperCase());
 						return periph;
 					}
 				}
 			}
+			
+			Msg.debug(getClass(), "No peripheral found containing address 0x" + Long.toHexString(targetAddr).toUpperCase());
 		} catch (Exception e) {
 			// Log error for debugging but don't fail the operation
-			Msg.debug(getClass(), "Error finding peripheral by address 0x" + 
-				Long.toHexString(targetAddr).toUpperCase() + ": " + e.getMessage());
+			Msg.warn(getClass(), "Exception while finding peripheral by address 0x" + 
+				Long.toHexString(targetAddr).toUpperCase() + ": " + e.getMessage(), e);
 		}
 		return null;
 	}

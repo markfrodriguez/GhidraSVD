@@ -42,7 +42,7 @@ SVD: <PERIPHERAL>[<CLUSTER>].<REGISTER>|<PERIPHERAL_DESC>|<CLUSTER_DESC>|<REGIST
 - **FIELD_DESCRIPTION** - Field description from SVD
 - **ENUMERATED_VALUE_DESCRIPTION** - Description of current enumerated value (optional)
 
-**Multiple fields separated by commas**
+**Multiple fields separated by carets (^)**
 
 #### 5. Interrupt Context
 **Format:** `ACTION:INTERRUPT_NAME:VECTOR_NUMBER`
@@ -52,7 +52,7 @@ SVD: <PERIPHERAL>[<CLUSTER>].<REGISTER>|<PERIPHERAL_DESC>|<CLUSTER_DESC>|<REGIST
 - **INTERRUPT_NAME** - Interrupt name from SVD (e.g., `EIC_INTREQ_15`)
 - **VECTOR_NUMBER** - Interrupt vector number (e.g., `27`)
 
-**Multiple interrupts separated by commas, or `N/A` if none**
+**Multiple interrupts separated by carets (^), or `N/A` if none**
 
 #### 6. Mode Context
 Additional mode information for cluster registers (e.g., `Mode 2: Clock/Calendar`) or `N/A`
@@ -61,7 +61,7 @@ Additional mode information for cluster registers (e.g., `Mode 2: Clock/Calendar
 
 ### Read Operation with Multiple Fields
 ```
-SVD: RTC[MODE2].SYNCBUSY|Real-Time Counter|Clock/Calendar MODE2|Synchronization Busy Status|32|READ|SWRST:0:1(0x0):Software Reset Bit Busy:Reset operation not busy,ENABLE:1:1(0x0):Enable Bit Busy:Enable operation not busy,FREQCORR:2:1(0x0):FREQCORR Register Busy:Frequency correction not busy,CLOCK:3:1(0x0):CLOCK Register Busy:Clock register not busy|N/A|N/A
+SVD: RTC[MODE2].SYNCBUSY|Real-Time Counter|Clock/Calendar MODE2|Synchronization Busy Status|32|READ|SWRST:0:1(0x0):Software Reset Bit Busy:Reset operation not busy^ENABLE:1:1(0x0):Enable Bit Busy:Enable operation not busy^FREQCORR:2:1(0x0):FREQCORR Register Busy:Frequency correction not busy^CLOCK:3:1(0x0):CLOCK Register Busy:Clock register not busy|N/A|N/A
 ```
 
 ### Write Operation with Interrupt Context
@@ -71,12 +71,12 @@ SVD: EIC.INTENSET|External Interrupt Controller|N/A|Interrupt Enable Set|16|WRIT
 
 ### Write Operation with Mode Context
 ```
-SVD: RTC[CLOCK].CTRLA|Real-Time Counter|Clock/Calendar Mode|Control A|16|WRITE:0x8182|MODE:0:2(0x2):Operating Mode:Mode 2 Clock/Calendar,ENABLE:1:1(0x1):Enable:Enable the peripheral|N/A|Mode 2: Clock/Calendar
+SVD: RTC[CLOCK].CTRLA|Real-Time Counter|Clock/Calendar Mode|Control A|16|WRITE:0x8182|MODE:0:2(0x2):Operating Mode:Mode 2 Clock/Calendar^ENABLE:1:1(0x1):Enable:Enable the peripheral|N/A|Mode 2: Clock/Calendar
 ```
 
 ### Standard Register without Cluster
 ```
-SVD: PORT.OUT2|Input/Output Port|N/A|Data Output Value|32|READ|OUT0:0:1(0x0):Output Data Bit 0:Pin output low,OUT1:1:1(0x1):Output Data Bit 1:Pin output high|N/A|N/A
+SVD: PORT.OUT2|Input/Output Port|N/A|Data Output Value|32|READ|OUT0:0:1(0x0):Output Data Bit 0:Pin output low^OUT1:1:1(0x1):Output Data Bit 1:Pin output high|N/A|N/A
 ```
 
 ## Legacy Format (Previous Implementation)
