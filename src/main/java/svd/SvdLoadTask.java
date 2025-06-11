@@ -746,29 +746,24 @@ public class SvdLoadTask extends Task {
 							}
 							
 							if (regInfo != null) {
-								// Determine operation type and enhance comment accordingly
+								// Determine operation type and generate new pipe-delimited format
 								boolean isWriteOperation = isWriteOperationToPeripheral(instruction, targetAddr);
-								String enhancedRegInfo = regInfo;
 								
+								// Extract immediate value for write operations
+								Long immediateValue = null;
 								if (isWriteOperation) {
-									// For write operations, try to extract and analyze the value being written
-									Long immediateValue = extractImmediateValueForWrite(instruction, targetAddr);
-									if (immediateValue != null) {
-										// Enhance with immediate value analysis: <== 0xXXXX
-										enhancedRegInfo = enhanceRegisterInfoWithImmediateValue(regInfo, targetAddr, immediateValue, registerMap, usedPeripherals);
-									} else {
-										// Write operation but couldn't determine value, still show write direction
-										enhancedRegInfo = regInfo.replaceAll("@[^\\s]*", "<== ?");
-									}
-								} else {
-									// For read operations, show read direction: ==>
-									enhancedRegInfo = regInfo.replaceAll("@[^\\s]*", "==>");
+									immediateValue = extractImmediateValueForWrite(instruction, targetAddr);
 								}
 								
-								// Simply overwrite any existing comment with our SVD comment
-								String newComment = "SVD: " + enhancedRegInfo;
-								listing.setComment(instruction.getAddress(), CodeUnit.EOL_COMMENT, newComment);
-								commentsAdded++;
+								// Generate new pipe-delimited format
+								String newFormatComment = generateNewSvdComment(targetAddr, immediateValue, usedPeripherals, isWriteOperation);
+								
+								if (newFormatComment != null) {
+									// Use new pipe-delimited format
+									String newComment = "SVD: " + newFormatComment;
+									listing.setComment(instruction.getAddress(), CodeUnit.EOL_COMMENT, newComment);
+									commentsAdded++;
+								}
 							}
 						}
 					}
@@ -1249,76 +1244,272 @@ public class SvdLoadTask extends Task {
 	}
 	
 	/**
-	 * Enhance register information with immediate value analysis
-	 * @param originalRegInfo The original register information string
+	 * Generate new pipe-delimited SVD comment format
 	 * @param targetAddr The target register address
-	 * @param immediateValue The immediate value being written
-	 * @param registerMap Map of register addresses to register information
+	 * @param immediateValue The immediate value being written (null for reads)
 	 * @param usedPeripherals Set of used peripherals to search for the register
-	 * @return Enhanced register information with immediate value field analysis
+	 * @param isWrite True if this is a write operation
+	 * @return New pipe-delimited SVD comment format
 	 */
-	private String enhanceRegisterInfoWithImmediateValue(String originalRegInfo, long targetAddr, Long immediateValue, Map<Long, String> registerMap, Set<SvdPeripheral> usedPeripherals) {
+	private String generateNewSvdComment(long targetAddr, Long immediateValue, Set<SvdPeripheral> usedPeripherals, boolean isWrite) {
 		try {
 			// Find the register object and peripheral for this address
 			SvdRegister register = findRegisterByAddress(targetAddr, usedPeripherals);
 			SvdPeripheral peripheral = findPeripheralByAddress(targetAddr, usedPeripherals);
 			
-			if (register == null || register.getFields().isEmpty()) {
-				// No register found or no fields to analyze, replace offset with immediate value
-				String result = originalRegInfo.replaceAll("@0x[0-9A-Fa-f]+", "<== 0x" + Long.toHexString(immediateValue).toUpperCase());
-				if (result.equals(originalRegInfo)) {
-					// Regex didn't match, try to replace any @[text] pattern
-					result = originalRegInfo.replaceAll("@[^\\s]*", "<== 0x" + Long.toHexString(immediateValue).toUpperCase());
+			if (register == null || peripheral == null) {
+				// If we can't find the specific register/peripheral, create a basic comment from regInfo
+				// This shouldn't happen but provides a fallback
+				return "UNKNOWN.REGISTER|N/A|N/A|N/A|32|" + (isWrite ? "WRITE" : "READ") + "|N/A|N/A|N/A";
+			}
+			
+			// 1. Register Path: PERIPHERAL[CLUSTER].REGISTER
+			StringBuilder regPath = new StringBuilder();
+			regPath.append(peripheral.getName());
+			
+			String activeClusterMode = null;
+			if (register.isClusterRegister()) {
+				// For cluster registers, try to determine active mode
+				var modeInfo = determineClusterModeInfoFromImmediateValue(peripheral, register, immediateValue);
+				if (modeInfo != null) {
+					activeClusterMode = modeInfo.name;
+					regPath.append("[").append(activeClusterMode).append("]");
+				} else {
+					regPath.append("[").append(register.getClusterName()).append("]");
 				}
-				return result;
 			}
 			
-			// For cluster registers, check if we can determine the active mode from the immediate value
-			String enhancedRegInfo = originalRegInfo;
-			if (register.isClusterRegister() && peripheral != null) {
-				String newMode = determineClusterModeFromImmediateValue(peripheral, register, immediateValue);
-				if (newMode != null) {
-					// Replace the cluster name with the active mode name
-					String oldClusterPattern = "\\[" + register.getClusterName() + "\\]";
-					String newClusterPattern = "[" + newMode + "]";
-					enhancedRegInfo = enhancedRegInfo.replaceAll(oldClusterPattern, newClusterPattern);
+			// Clean register name (remove cluster prefix if present)
+			String registerName = register.getName();
+			if (register.isClusterRegister()) {
+				String clusterPrefix = register.getClusterName() + "_";
+				if (registerName.startsWith(clusterPrefix)) {
+					registerName = registerName.substring(clusterPrefix.length());
+				}
+			}
+			regPath.append(".").append(registerName);
+			
+			// 2. Peripheral Description
+			String peripheralDesc = peripheral.getDescription();
+			if (peripheralDesc == null || peripheralDesc.trim().isEmpty()) {
+				peripheralDesc = "N/A";
+			}
+			
+			// 3. Cluster Description
+			String clusterDesc = "N/A";
+			if (register.isClusterRegister() && activeClusterMode != null) {
+				var modeInfo = determineClusterModeInfoFromImmediateValue(peripheral, register, immediateValue);
+				if (modeInfo != null && modeInfo.description != null && !modeInfo.description.trim().isEmpty()) {
+					clusterDesc = modeInfo.description.trim();
 				}
 			}
 			
-			// Analyze the immediate value using the register's field definitions
-			String fieldAnalysis = analyzeRegisterFieldsWithValue(immediateValue, register);
-			
-			// Check if this is an interrupt-related register and add interrupt context
-			String interruptContext = analyzeInterruptContext(targetAddr, immediateValue, usedPeripherals);
-			if (interruptContext != null && !interruptContext.trim().isEmpty()) {
-				fieldAnalysis += " [" + interruptContext + "]";
+			// 4. Register Description
+			String registerDesc = register.getDescription();
+			if (registerDesc == null || registerDesc.trim().isEmpty()) {
+				registerDesc = "N/A";
 			}
 			
-			// Replace the existing field analysis with our immediate value analysis and offset with immediate value
-			// Original format: "REGISTER - Description [32-bit] {field analysis} @offset"
-			// New format: "REGISTER - Description [32-bit] {field analysis} <== immediateValue"
-			int fieldStart = enhancedRegInfo.indexOf('{');
-			int fieldEnd = enhancedRegInfo.indexOf('}');
-			int offsetStart = enhancedRegInfo.lastIndexOf('@');
+			// 5. Register Size
+			String size = String.valueOf(register.getSize() > 0 ? register.getSize() : 32);
 			
-			if (fieldStart != -1 && fieldEnd != -1 && offsetStart != -1) {
-				// Replace field analysis and change @offset to <== immediateValue
-				String beforeFields = enhancedRegInfo.substring(0, fieldStart + 1);
-				String afterOffset = " <== 0x" + Long.toHexString(immediateValue).toUpperCase();
-				return beforeFields + fieldAnalysis + "}" + afterOffset;
+			// 6. Operation
+			String operation;
+			if (isWrite) {
+				if (immediateValue != null) {
+					operation = "WRITE:0x" + Long.toHexString(immediateValue).toUpperCase();
+				} else {
+					operation = "WRITE:UNKNOWN";
+				}
 			} else {
-				// Fallback: just append the analysis
-				return enhancedRegInfo + " <== 0x" + Long.toHexString(immediateValue).toUpperCase();
+				operation = "READ";
 			}
+			
+			// 7. Fields Analysis
+			String fields = generateFieldsAnalysis(register, immediateValue);
+			if (fields == null || fields.trim().isEmpty()) {
+				fields = "N/A";
+			}
+			
+			// 8. Interrupt Context
+			String interrupts = generateInterruptContext(targetAddr, immediateValue, usedPeripherals);
+			if (interrupts == null || interrupts.trim().isEmpty()) {
+				interrupts = "N/A";
+			}
+			
+			// 9. Mode Context
+			String modeContext = "N/A";
+			if (register.isClusterRegister() && activeClusterMode != null) {
+				var modeInfo = determineClusterModeInfoFromImmediateValue(peripheral, register, immediateValue);
+				if (modeInfo != null && modeInfo.description != null && !modeInfo.description.trim().isEmpty()) {
+					modeContext = modeInfo.description.trim();
+				}
+			}
+			
+			// Construct final pipe-delimited format
+			return String.format("%s|%s|%s|%s|%s|%s|%s|%s|%s",
+				regPath.toString(),
+				peripheralDesc,
+				clusterDesc,
+				registerDesc,
+				size,
+				operation,
+				fields,
+				interrupts,
+				modeContext
+			);
 			
 		} catch (Exception e) {
-			// Fallback to just showing the immediate value
-			String result = originalRegInfo.replaceAll("@0x[0-9A-Fa-f]+", "<== 0x" + Long.toHexString(immediateValue).toUpperCase());
-			if (result.equals(originalRegInfo)) {
-				// Regex didn't match, try to replace any @[text] pattern
-				result = originalRegInfo.replaceAll("@[^\\s]*", "<== 0x" + Long.toHexString(immediateValue).toUpperCase());
+			// Even if there's an exception, return a basic format
+			return "ERROR.REGISTER|N/A|N/A|N/A|32|" + (isWrite ? "WRITE" : "READ") + "|N/A|N/A|N/A";
+		}
+	}
+	
+	/**
+	 * Generate fields analysis in new format: FIELD_NAME:OFFSET:WIDTH(VALUE):FIELD_DESCRIPTION:ENUMERATED_VALUE_DESCRIPTION
+	 * @param register The register containing the fields
+	 * @param registerValue The register value to analyze (null for unknown value)
+	 * @return Comma-separated field analysis in new format
+	 */
+	private String generateFieldsAnalysis(SvdRegister register, Long registerValue) {
+		if (register == null || register.getFields().isEmpty()) {
+			return null;
+		}
+		
+		StringBuilder fieldAnalysis = new StringBuilder();
+		boolean first = true;
+		
+		for (var field : register.getFields()) {
+			if (!first) fieldAnalysis.append(",");
+			
+			// Field name
+			fieldAnalysis.append(field.getName()).append(":");
+			
+			// Bit offset
+			fieldAnalysis.append(field.getBitOffset()).append(":");
+			
+			// Bit width  
+			fieldAnalysis.append(field.getBitWidth()).append("(");
+			
+			// Field value (if available)
+			if (registerValue != null) {
+				long fieldValue = field.extractValue(registerValue);
+				fieldAnalysis.append("0x").append(Long.toHexString(fieldValue).toUpperCase());
+			} else {
+				fieldAnalysis.append("0x0"); // Default when value unknown
 			}
-			return result;
+			fieldAnalysis.append("):");
+			
+			// Field description
+			String fieldDesc = field.getDescription();
+			if (fieldDesc != null && !fieldDesc.trim().isEmpty()) {
+				fieldAnalysis.append(fieldDesc.trim());
+			} else {
+				fieldAnalysis.append("Field");
+			}
+			
+			// Enumerated value description (if applicable and value is known)
+			if (registerValue != null && field.hasEnumeratedValues()) {
+				long fieldValue = field.extractValue(registerValue);
+				SvdEnumeratedValue enumValue = field.findEnumeratedValue(fieldValue);
+				if (enumValue != null) {
+					String enumDesc = enumValue.getDescription();
+					if (enumDesc != null && !enumDesc.trim().isEmpty()) {
+						fieldAnalysis.append(":").append(enumDesc.trim());
+					}
+				}
+			}
+			
+			first = false;
+		}
+		
+		return fieldAnalysis.toString();
+	}
+	
+	/**
+	 * Generate interrupt context in new format: ACTION:INTERRUPT_NAME:VECTOR_NUMBER
+	 * @param targetAddr The target register address
+	 * @param immediateValue The immediate value being written (null for reads)
+	 * @param usedPeripherals Set of used peripherals to search
+	 * @return Comma-separated interrupt context in new format
+	 */
+	private String generateInterruptContext(long targetAddr, Long immediateValue, Set<SvdPeripheral> usedPeripherals) {
+		try {
+			// Find the peripheral and register for this address
+			SvdPeripheral peripheral = null;
+			SvdRegister register = null;
+			
+			for (SvdPeripheral periph : usedPeripherals) {
+				for (SvdRegister reg : periph.getRegisters()) {
+					long regAddress = periph.getBaseAddr() + reg.getOffset();
+					if (regAddress == targetAddr) {
+						peripheral = periph;
+						register = reg;
+						break;
+					}
+				}
+				if (peripheral != null) break;
+			}
+			
+			if (peripheral == null || register == null || peripheral.getInterrupts().isEmpty()) {
+				return null;
+			}
+			
+			// Check if this register name suggests it's interrupt-related
+			String regName = register.getName().toUpperCase();
+			boolean isInterruptRegister = regName.contains("INTEN") || regName.contains("IRQ") || 
+										 regName.contains("INT") || regName.contains("MASK") ||
+										 regName.contains("ENABLE") || regName.contains("FLAG") ||
+										 regName.contains("STATUS") || regName.contains("CTRL");
+			
+			if (!isInterruptRegister || immediateValue == null) {
+				return null;
+			}
+			
+			// Determine interrupt action based on register name
+			String action;
+			if (regName.contains("INTENSET") || regName.contains("ENABLE")) {
+				action = "ENABLE";
+			} else if (regName.contains("INTENCLR") || regName.contains("DISABLE")) {
+				action = "DISABLE";
+			} else {
+				action = "STATUS";
+			}
+			
+			// Analyze which interrupts are affected by the immediate value
+			List<String> affectedInterrupts = new ArrayList<>();
+			
+			// Check each bit in the immediate value
+			for (int bit = 0; bit < 32; bit++) {
+				if ((immediateValue & (1L << bit)) != 0) {
+					// This bit is set, find corresponding interrupt
+					for (SvdInterrupt interrupt : peripheral.getInterrupts()) {
+						if (interrupt.matchesBitPosition(bit)) {
+							// Format: ACTION:INTERRUPT_NAME:VECTOR_NUMBER
+							String interruptName = interrupt.getName();
+							int vectorNumber = interrupt.getValue();
+							affectedInterrupts.add(action + ":" + interruptName + ":" + vectorNumber);
+							break;
+						}
+					}
+				}
+			}
+			
+			if (affectedInterrupts.isEmpty()) {
+				return null;
+			}
+			
+			// Join with commas (limit to first 3 to avoid overly long comments)
+			StringBuilder result = new StringBuilder();
+			for (int i = 0; i < Math.min(affectedInterrupts.size(), 3); i++) {
+				if (i > 0) result.append(",");
+				result.append(affectedInterrupts.get(i));
+			}
+			
+			return result.toString();
+			
+		} catch (Exception e) {
+			return null;
 		}
 	}
 	
@@ -1671,6 +1862,19 @@ public class SvdLoadTask extends Task {
 	}
 	
 	/**
+	 * Inner class to hold mode information including name and description
+	 */
+	private static class ModeInfo {
+		public final String name;
+		public final String description;
+		
+		public ModeInfo(String name, String description) {
+			this.name = name;
+			this.description = description;
+		}
+	}
+	
+	/**
 	 * Determine the cluster mode being set based on an immediate value being written
 	 * to a control register. This is used when we're analyzing a write operation to
 	 * a control register and want to determine what mode is being activated.
@@ -1681,6 +1885,20 @@ public class SvdLoadTask extends Task {
 	 * @return The mode name from enumerated values, or null if cannot determine
 	 */
 	private String determineClusterModeFromImmediateValue(SvdPeripheral peripheral, SvdRegister register, long immediateValue) {
+		var modeInfo = determineClusterModeInfoFromImmediateValue(peripheral, register, immediateValue);
+		return (modeInfo != null) ? modeInfo.name : null;
+	}
+	
+	/**
+	 * Determine the cluster mode information (name and description) being set based on 
+	 * an immediate value being written to a control register.
+	 * 
+	 * @param peripheral The peripheral being written to
+	 * @param register The register being written to
+	 * @param immediateValue The value being written
+	 * @return ModeInfo with name and description, or null if cannot determine
+	 */
+	private ModeInfo determineClusterModeInfoFromImmediateValue(SvdPeripheral peripheral, SvdRegister register, long immediateValue) {
 		try {
 			// Check if this is a control register
 			String regName = register.getName().toUpperCase();
@@ -1703,7 +1921,7 @@ public class SvdLoadTask extends Task {
 			// Find the enumerated value that matches this mode
 			var activeEnumValue = modeField.findEnumeratedValue(modeFieldValue);
 			if (activeEnumValue != null) {
-				return activeEnumValue.getName();
+				return new ModeInfo(activeEnumValue.getName(), activeEnumValue.getDescription());
 			}
 			
 			return null;
