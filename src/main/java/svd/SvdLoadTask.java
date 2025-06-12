@@ -45,6 +45,7 @@ import ghidra.program.model.data.WordDataType;
 import ghidra.program.model.lang.Register;
 import ghidra.program.model.listing.CodeUnit;
 import ghidra.program.model.listing.Instruction;
+import ghidra.program.model.listing.InstructionIterator;
 import ghidra.program.model.listing.Listing;
 import ghidra.program.model.listing.Program;
 import ghidra.program.model.scalar.Scalar;
@@ -103,6 +104,9 @@ public class SvdLoadTask extends Task {
 	private Program mProgram;
 	private Memory mMemory;
 	private SymbolTable mSymTable;
+	
+	// Peripheral mode state tracking - only caches MODE field values for consistent cluster detection
+	private Map<String, Integer> peripheralModeState = new HashMap<>();
 
 	public SvdLoadTask(Program program, File svdFile) {
 		super("Load SVD", true, false, true, true);
@@ -155,6 +159,10 @@ public class SvdLoadTask extends Task {
 		// Add SVD comments for all used peripherals (with full register data available) after all blocks are processed
 		monitor.setMessage("Adding SVD comments to instructions...");
 		monitor.checkCancelled();
+		
+		// First pass: Pre-populate peripheral mode cache by scanning all CTRLA writes
+		prePopulatePeripheralModeCache(usedPeripherals);
+		
 		addSvdCommentsToInstructions(usedPeripherals);
 		
 		Msg.info(getClass(), "SVD import complete. Created " + blocks.size() + " memory blocks for " + 
@@ -1309,6 +1317,9 @@ public class SvdLoadTask extends Task {
 				return buildFallbackComment(isWrite, "ERROR.REGISTER");
 			}
 			
+			// Detect and cache MODE field writes for consistent cluster mode detection
+			detectAndCacheModeWrite(peripheral, register, immediateValue);
+			
 			// Build all components for the pipe-delimited format
 			String regPath = buildRegisterPath(peripheral, register, immediateValue);
 			String peripheralDesc = getDescriptionOrDefault(peripheral.getDescription());
@@ -1342,9 +1353,18 @@ public class SvdLoadTask extends Task {
 		if (register.isClusterRegister()) {
 			// For cluster registers, try to determine active mode
 			ModeInfo modeInfo = null;
-			if (immediateValue != null) {
+			
+			// First, check if we have a cached mode value for this peripheral
+			Integer cachedMode = getCachedModeValue(peripheral.getName());
+			if (cachedMode != null) {
+				// Use cached mode value to determine cluster mode
+				modeInfo = lookupModeFromValue(peripheral, register, cachedMode);
+			} else if (immediateValue != null) {
+				// Fall back to immediate value analysis
 				modeInfo = determineClusterModeInfoFromImmediateValue(peripheral, register, immediateValue.longValue());
 			}
+			// Note: If no cache and no immediate value, modeInfo will be null and we'll use default cluster name
+			
 			String clusterName = (modeInfo != null) ? modeInfo.name : register.getClusterName();
 			regPath.append("[").append(clusterName).append("]");
 		}
@@ -1401,9 +1421,17 @@ public class SvdLoadTask extends Task {
 		}
 		
 		ModeInfo modeInfo = null;
-		if (immediateValue != null) {
+		
+		// First, check if we have a cached mode value for this peripheral
+		Integer cachedMode = getCachedModeValue(peripheral.getName());
+		if (cachedMode != null) {
+			// Use cached mode value to determine mode context
+			modeInfo = lookupModeFromValue(peripheral, register, cachedMode);
+		} else if (immediateValue != null) {
+			// Fall back to immediate value analysis
 			modeInfo = determineClusterModeInfoFromImmediateValue(peripheral, register, immediateValue.longValue());
 		}
+		
 		if (modeInfo != null && modeInfo.description != null && !modeInfo.description.trim().isEmpty()) {
 			return modeInfo.description.trim();
 		}
@@ -1570,9 +1598,17 @@ public class SvdLoadTask extends Task {
 		}
 		
 		ModeInfo modeInfo = null;
-		if (immediateValue != null) {
+		
+		// First, check if we have a cached mode value for this peripheral
+		Integer cachedMode = getCachedModeValue(peripheral.getName());
+		if (cachedMode != null) {
+			// Use cached mode value to determine cluster description
+			modeInfo = lookupModeFromValue(peripheral, register, cachedMode);
+		} else if (immediateValue != null) {
+			// Fall back to immediate value analysis
 			modeInfo = determineClusterModeInfoFromImmediateValue(peripheral, register, immediateValue.longValue());
 		}
+		
 		if (modeInfo != null && modeInfo.description != null && !modeInfo.description.trim().isEmpty()) {
 			return modeInfo.description.trim();
 		}
@@ -2486,6 +2522,126 @@ public class SvdLoadTask extends Task {
 			
 		} catch (Exception e) {
 			Msg.error(getClass(), "Error marking main function: " + e.getMessage());
+		}
+	}
+	
+	/**
+	 * Detect and cache MODE field writes to maintain consistent peripheral mode state
+	 */
+	private void detectAndCacheModeWrite(SvdPeripheral peripheral, SvdRegister register, Long immediateValue) {
+		// Only process CTRLA registers that have MODE fields and immediate values
+		if (register == null || immediateValue == null || !register.isClusterRegister()) {
+			return;
+		}
+		
+		// Check if this is a CTRLA register (may be cluster-prefixed like "I2CM_CTRLA")
+		String registerName = register.getName();
+		if (!registerName.equals("CTRLA") && !registerName.endsWith("_CTRLA")) {
+			return;
+		}
+		
+		try {
+			// Extract MODE field from immediate value (typically bits 2:3 for SERCOM)
+			// This handles the standard ARM Cortex-M peripheral MODE field layout
+			int modeValue = (int)((immediateValue.longValue() >> 2) & 0x7);
+			String peripheralName = peripheral.getName();
+			
+			// Non-zero MODE latching logic:
+			// - Cache non-zero MODE values (explicit mode configuration)
+			// - Cache initial MODE value (including zero) if no mode cached yet
+			// - Preserve existing cache for zero MODE values (likely read-modify-write operations)
+			Integer existingMode = peripheralModeState.get(peripheralName);
+			if (modeValue != 0 || existingMode == null) {
+				peripheralModeState.put(peripheralName, modeValue);
+			}
+			// If modeValue is 0 and we already have a cached value, preserve existing cache
+			// This handles read-modify-write operations that only modify ENABLE/other bits
+			
+		} catch (Exception e) {
+			// Error extracting mode, but don't fail the comment generation
+		}
+	}
+	
+	/**
+	 * Get cached mode value for a peripheral, returns null if not cached
+	 */
+	private Integer getCachedModeValue(String peripheralName) {
+		return peripheralModeState.get(peripheralName);
+	}
+	
+	/**
+	 * Look up mode info from a cached mode value
+	 */
+	private ModeInfo lookupModeFromValue(SvdPeripheral peripheral, SvdRegister register, int modeValue) {
+		try {
+			// Find the CTRLA register to get the MODE field enumerated values
+			var registers = peripheral.getRegisters();
+			for (var reg : registers) {
+				// Check for both "CTRLA" and cluster-prefixed names like "I2CM_CTRLA"
+				String regName = reg.getName();
+				if (regName.equals("CTRLA") || regName.endsWith("_CTRLA")) {
+					var fields = reg.getFields();
+					for (var field : fields) {
+						if (field.getName().equals("MODE")) {
+							var enumValues = field.getEnumeratedValues();
+							for (var enumValue : enumValues) {
+								if (enumValue.getValue() == modeValue) {
+									return new ModeInfo(enumValue.getName(), enumValue.getDescription());
+								}
+							}
+						}
+					}
+					break;
+				}
+			}
+		} catch (Exception e) {
+			// Error looking up mode, return null to fall back to other methods
+		}
+		return null;
+	}
+	
+	/**
+	 * First pass: Pre-populate peripheral mode cache by scanning all CTRLA writes
+	 * This ensures consistent cluster mode detection across all register accesses
+	 */
+	private void prePopulatePeripheralModeCache(Set<SvdPeripheral> usedPeripherals) {
+		try {
+			Listing listing = mProgram.getListing();
+			
+			// Iterate through all instructions in the program
+			InstructionIterator instructions = listing.getInstructions(true);
+			while (instructions.hasNext()) {
+				Instruction instruction = instructions.next();
+				
+				// Check each operand for memory references
+				for (int i = 0; i < instruction.getNumOperands(); i++) {
+					var operandAddresses = instruction.getOperandReferences(i);
+					for (var ref : operandAddresses) {
+						if (ref.isMemoryReference()) {
+							long targetAddr = ref.getToAddress().getOffset();
+							
+							// Check if this is a write operation to a peripheral register
+							boolean isWriteOperation = isWriteOperationToPeripheral(instruction, targetAddr);
+							if (isWriteOperation) {
+								// Extract immediate value for write operations
+								Long immediateValue = extractImmediateValueForWrite(instruction, targetAddr);
+								
+								// Find the register and peripheral for this address
+								SvdRegister register = findRegisterByAddress(targetAddr, usedPeripherals);
+								SvdPeripheral peripheral = findPeripheralByAddress(targetAddr, usedPeripherals);
+								
+								if (register != null && peripheral != null) {
+									// Only cache CTRLA writes (this will populate the cache)
+									detectAndCacheModeWrite(peripheral, register, immediateValue);
+								}
+							}
+						}
+					}
+				}
+			}
+		} catch (Exception e) {
+			// Error during cache population, but don't fail SVD loading
+			Msg.warn(getClass(), "Error pre-populating peripheral mode cache: " + e.getMessage());
 		}
 	}
 	

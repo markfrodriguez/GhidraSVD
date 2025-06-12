@@ -70,6 +70,7 @@ GhidraSVD is a Ghidra extension that imports CMSIS SVD (System View Description)
    - Immediate value analysis with hex formatting
    - Rich mode context (`[Mode: Mode 2: Clock/Calendar]`)
 8. **Main Function Detection**: Automatically identifies the application main entry point using ARM Cortex-M reset vector analysis and startup code flow tracing
+9. **Peripheral Mode State Tracking**: Maintains consistent cluster mode detection across register accesses using non-zero MODE field latching
 
 **Extension Structure:**
 The built extension contains compiled classes in `lib/GhidraSVD.jar`, the SVD parser dependency, source archive, and metadata files following Ghidra extension format.
@@ -113,3 +114,27 @@ SVD: Main entry point - Application start (auto-identified from reset vector ana
 - `findResetHandlerFromVectorTable()`: ARM vector table parsing
 - `analyzeStartupFunction()`: Recursive startup code analysis
 - `isLikelyMainFunction()`: Heuristic-based main identification
+
+## Peripheral Mode State Tracking
+
+The extension implements sophisticated peripheral mode state tracking to ensure consistent cluster mode detection across all register accesses, addressing MMIO register read limitations in static analysis.
+
+**Problem Solved:**
+- **MMIO Limitation**: Reading peripheral registers in Ghidra returns unpredictable values since no actual hardware exists
+- **Inconsistent Modes**: Different registers for the same peripheral showed different cluster modes
+- **Read-Modify-Write Issues**: Enable operations overwrote cached mode values
+
+**Non-Zero MODE Latching Algorithm:**
+1. **Initial Mode Detection**: Cache MODE field value from first CTRLA write (e.g., `0x40100104` → MODE=1)
+2. **Mode Preservation**: Preserve cached mode for subsequent zero MODE values (read-modify-write operations)
+3. **Explicit Mode Changes**: Update cache only for non-zero MODE values (intentional reconfigurations)
+
+**Implementation Benefits:**
+- **Consistent Cluster Names**: All registers show same mode (e.g., `SERCOM5[USART_INT_CLK]` for all registers)
+- **Accurate Hardware Reflection**: MODE values reflect actual firmware configuration, not unreliable MMIO reads
+- **Robust Detection**: Handles both initial configuration and enable/disable operations correctly
+
+**Key Methods:**
+- `detectAndCacheModeWrite()`: Non-zero MODE field latching logic
+- `getCachedModeValue()`: Retrieves cached mode for consistent cluster detection
+- `lookupModeFromValue()`: Converts cached mode values to SVD enumerated descriptions
