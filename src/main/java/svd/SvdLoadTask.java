@@ -147,6 +147,11 @@ public class SvdLoadTask extends Task {
 			processBlock(blockInfo);
 		}
 		
+		// Identify main function entry point
+		monitor.setMessage("Identifying main function entry point...");
+		monitor.checkCancelled();
+		identifyMainEntryPoint();
+		
 		// Add SVD comments for all used peripherals (with full register data available) after all blocks are processed
 		monitor.setMessage("Adding SVD comments to instructions...");
 		monitor.checkCancelled();
@@ -1280,9 +1285,6 @@ public class SvdLoadTask extends Task {
 	 */
 	private String generateNewSvdComment(long targetAddr, Long immediateValue, Set<SvdPeripheral> usedPeripherals, boolean isWrite) {
 		try {
-			// Add debug logging for address lookup
-			Msg.debug(getClass(), "Generating SVD comment for address 0x" + Long.toHexString(targetAddr).toUpperCase() + 
-				" with " + usedPeripherals.size() + " available peripherals");
 			
 			// Find the register object and peripheral for this address
 			SvdRegister register = findRegisterByAddress(targetAddr, usedPeripherals);
@@ -1549,45 +1551,7 @@ public class SvdLoadTask extends Task {
 	 * Log detailed information about available peripherals for debugging address lookup failures
 	 */
 	private void logAvailablePeripherals(long targetAddr, Set<SvdPeripheral> usedPeripherals) {
-		Msg.debug(getClass(), "Available peripherals for address lookup:");
-		for (SvdPeripheral periph : usedPeripherals) {
-			Msg.debug(getClass(), "  Peripheral: " + periph.getName() + " @ base 0x" + 
-				Long.toHexString(periph.getBaseAddr()).toUpperCase());
-			
-			// Show first few registers for this peripheral
-			int regCount = 0;
-			for (SvdRegister reg : periph.getRegisters()) {
-				if (regCount >= 3) { // Limit to first 3 registers per peripheral to avoid log spam
-					if (periph.getRegisters().size() > 3) {
-						Msg.debug(getClass(), "    ... and " + (periph.getRegisters().size() - 3) + " more registers");
-					}
-					break;
-				}
-				long regAddr = periph.getBaseAddr() + reg.getOffset();
-				Msg.debug(getClass(), "    Register: " + reg.getName() + " @ 0x" + 
-					Long.toHexString(regAddr).toUpperCase() + " (offset 0x" + 
-					Long.toHexString(reg.getOffset()).toUpperCase() + ")");
-				regCount++;
-			}
-		}
-		
-		// Calculate the closest register addresses to help understand the miss
-		long closestDistance = Long.MAX_VALUE;
-		String closestInfo = "none";
-		for (SvdPeripheral periph : usedPeripherals) {
-			for (SvdRegister reg : periph.getRegisters()) {
-				long regAddr = periph.getBaseAddr() + reg.getOffset();
-				long distance = Math.abs(regAddr - targetAddr);
-				if (distance < closestDistance) {
-					closestDistance = distance;
-					closestInfo = periph.getName() + "." + reg.getName() + " @ 0x" + 
-						Long.toHexString(regAddr).toUpperCase() + " (distance: 0x" + 
-						Long.toHexString(distance).toUpperCase() + ")";
-				}
-			}
-		}
-		Msg.debug(getClass(), "Closest register to target 0x" + Long.toHexString(targetAddr).toUpperCase() + 
-			" is: " + closestInfo);
+		// Debug logging disabled to reduce console noise
 	}
 	
 	/**
@@ -1684,8 +1648,6 @@ public class SvdLoadTask extends Task {
 			
 		} catch (Exception e) {
 			// Log error for debugging but don't fail SVD comment generation
-			Msg.debug(getClass(), "Error generating interrupt context for address 0x" + 
-				Long.toHexString(targetAddr).toUpperCase() + ": " + e.getMessage());
 			return null;
 		}
 	}
@@ -1699,7 +1661,7 @@ public class SvdLoadTask extends Task {
 	private SvdRegister findRegisterByAddress(long targetAddr, Set<SvdPeripheral> usedPeripherals) {
 		// Search through the used peripherals to find the register
 		try {
-			Msg.debug(getClass(), "Looking for register at address 0x" + Long.toHexString(targetAddr).toUpperCase());
+			// Debug message removed to reduce console noise
 			
 			int totalRegistersChecked = 0;
 			for (SvdPeripheral periph : usedPeripherals) {
@@ -1707,23 +1669,16 @@ public class SvdLoadTask extends Task {
 					totalRegistersChecked++;
 					long regAddress = periph.getBaseAddr() + reg.getOffset();
 					
-					// Log first few address comparisons for debugging
-					if (totalRegistersChecked <= 5) {
-						Msg.debug(getClass(), "  Checking " + periph.getName() + "." + reg.getName() + 
-							" @ 0x" + Long.toHexString(regAddress).toUpperCase() + 
-							" (base: 0x" + Long.toHexString(periph.getBaseAddr()).toUpperCase() + 
-							" + offset: 0x" + Long.toHexString(reg.getOffset()).toUpperCase() + ")");
-					}
+					// Debug logging removed
 					
 					if (regAddress == targetAddr) {
-						Msg.debug(getClass(), "Found register match: " + periph.getName() + "." + reg.getName() + 
-							" @ 0x" + Long.toHexString(regAddress).toUpperCase());
+						// Found register match
 						return reg;
 					}
 				}
 			}
 			
-			Msg.debug(getClass(), "No register found after checking " + totalRegistersChecked + " registers");
+			// No register found
 		} catch (Exception e) {
 			// Log error for debugging but don't fail the operation
 			Msg.warn(getClass(), "Exception while finding register by address 0x" + 
@@ -1740,20 +1695,19 @@ public class SvdLoadTask extends Task {
 	 */
 	private SvdPeripheral findPeripheralByAddress(long targetAddr, Set<SvdPeripheral> usedPeripherals) {
 		try {
-			Msg.debug(getClass(), "Looking for peripheral containing address 0x" + Long.toHexString(targetAddr).toUpperCase());
+			// Looking for peripheral containing address
 			
 			for (SvdPeripheral periph : usedPeripherals) {
 				for (SvdRegister reg : periph.getRegisters()) {
 					long regAddress = periph.getBaseAddr() + reg.getOffset();
 					if (regAddress == targetAddr) {
-						Msg.debug(getClass(), "Found peripheral match: " + periph.getName() + 
-							" containing register " + reg.getName() + " @ 0x" + Long.toHexString(regAddress).toUpperCase());
+						// Found peripheral match
 						return periph;
 					}
 				}
 			}
 			
-			Msg.debug(getClass(), "No peripheral found containing address 0x" + Long.toHexString(targetAddr).toUpperCase());
+			// No peripheral found
 		} catch (Exception e) {
 			// Log error for debugging but don't fail the operation
 			Msg.warn(getClass(), "Exception while finding peripheral by address 0x" + 
@@ -2169,6 +2123,370 @@ public class SvdLoadTask extends Task {
 			}
 		} catch (Exception e) {
 			return null;
+		}
+	}
+	
+	/**
+	 * Identify and mark the main function entry point by analyzing the reset vector
+	 * and following the startup code flow. This works without symbol information.
+	 */
+	private void identifyMainEntryPoint() {
+		try {
+			Msg.warn(getClass(), "MAIN DETECTION: Starting main function identification...");
+			
+			// Find reset vector from vector table
+			Address resetHandlerAddr = findResetHandlerFromVectorTable();
+			if (resetHandlerAddr == null) {
+				Msg.warn(getClass(), "Could not find reset handler in vector table");
+				return;
+			}
+			
+			Msg.warn(getClass(), "MAIN DETECTION: Found reset handler at: " + resetHandlerAddr);
+			
+			// Follow startup code to find main function
+			Address mainAddr = findMainFromStartupFlow(resetHandlerAddr);
+			if (mainAddr != null) {
+				markMainFunction(mainAddr);
+				Msg.warn(getClass(), "MAIN DETECTION: Successfully identified main function at: " + mainAddr);
+			} else {
+				Msg.warn(getClass(), "Could not identify main function from startup flow");
+			}
+		} catch (Exception e) {
+			Msg.warn(getClass(), "Error identifying main entry point: " + e.getMessage(), e);
+		}
+	}
+	
+	/**
+	 * Find the reset handler address from the ARM Cortex-M vector table.
+	 * The vector table starts at the lowest memory address, with:
+	 * [0x00] Initial Stack Pointer
+	 * [0x04] Reset Handler Address
+	 */
+	private Address findResetHandlerFromVectorTable() {
+		try {
+			AddressSpace addrSpace = mProgram.getAddressFactory().getDefaultAddressSpace();
+			Address vectorTableBase = mMemory.getMinAddress();
+			
+			Msg.warn(getClass(), "MAIN DETECTION: Vector table base: " + vectorTableBase);
+			
+			// Reset vector is at offset 0x4 in the vector table
+			Address resetVectorAddr = vectorTableBase.add(4);
+			
+			Msg.info(getClass(), "Reading reset vector from: " + resetVectorAddr);
+			
+			// Read the reset handler address
+			int resetHandlerValue = mMemory.getInt(resetVectorAddr);
+			
+			Msg.warn(getClass(), "MAIN DETECTION: Raw reset handler value: 0x" + Integer.toHexString(resetHandlerValue).toUpperCase());
+			
+			// ARM Cortex-M uses Thumb mode, so clear the LSB
+			long resetHandlerAddr = resetHandlerValue & 0xFFFFFFFEL;
+			
+			Address resetHandler = addrSpace.getAddress(resetHandlerAddr);
+			
+			Msg.info(getClass(), "Computed reset handler address: " + resetHandler);
+			
+			// Verify this address points to valid code
+			MemoryBlock block = mMemory.getBlock(resetHandler);
+			if (block != null) {
+				Msg.info(getClass(), "Reset handler is in valid memory block: " + block.getName());
+				return resetHandler;
+			} else {
+				Msg.warn(getClass(), "Reset handler address is not in a valid memory block");
+			}
+			
+		} catch (Exception e) {
+			Msg.warn(getClass(), "Error reading reset vector: " + e.getMessage(), e);
+		}
+		
+		return null;
+	}
+	
+	/**
+	 * Follow the startup code flow from reset handler to identify main function.
+	 * Typical flow: Reset -> Stack setup -> SystemInit -> C runtime -> main()
+	 */
+	private Address findMainFromStartupFlow(Address startupAddr) {
+		try {
+			Listing listing = mProgram.getListing();
+			Set<Address> visitedAddresses = new HashSet<>();
+			
+			return analyzeStartupFunction(startupAddr, listing, visitedAddresses, 0);
+			
+		} catch (Exception e) {
+			Msg.debug(getClass(), "Error analyzing startup flow: " + e.getMessage());
+			return null;
+		}
+	}
+	
+	/**
+	 * Recursively analyze startup functions to find main.
+	 * Uses heuristics to identify when we've found the main function.
+	 */
+	private Address analyzeStartupFunction(Address funcAddr, Listing listing, Set<Address> visited, int depth) {
+		// Prevent infinite recursion and limit search depth
+		if (depth > 5 || visited.contains(funcAddr)) {
+			return null;
+		}
+		visited.add(funcAddr);
+		
+		Instruction current = listing.getInstructionAt(funcAddr);
+		int maxInstructions = 200; // Reasonable limit for startup functions
+		
+		while (current != null && maxInstructions-- > 0) {
+			String mnemonic = current.getMnemonicString().toLowerCase();
+			
+			// Look for function calls (bl, blx)
+			if (mnemonic.equals("bl") || mnemonic.equals("blx")) {
+				Address target = getCallTarget(current);
+				if (target != null) {
+					Msg.info(getClass(), "Found function call at depth " + depth + " to: " + target);
+					
+					// Check if this could be main based on heuristics
+					if (isLikelyMainFunction(target, depth)) {
+						Msg.info(getClass(), "Function at " + target + " identified as main function!");
+						return target;
+					}
+					
+					// If not main, but looks like startup code, recurse
+					if (isStartupFunction(target) && depth < 3) {
+						Msg.info(getClass(), "Function at " + target + " looks like startup code, recursing...");
+						Address mainFromRecursion = analyzeStartupFunction(target, listing, visited, depth + 1);
+						if (mainFromRecursion != null) {
+							return mainFromRecursion;
+						}
+					} else {
+						Msg.info(getClass(), "Function at " + target + " does not look like startup code (depth=" + depth + ")");
+					}
+				}
+			}
+			
+			// Move to next instruction
+			current = listing.getInstructionAfter(current.getAddress());
+			
+			// Stop at returns or infinite loops
+			if (current != null) {
+				String nextMnemonic = current.getMnemonicString().toLowerCase();
+				if (nextMnemonic.equals("bx") && current.getNumOperands() > 0) {
+					// Check if this is "bx lr" (return)
+					if (current.getDefaultOperandRepresentation(0).toLowerCase().contains("lr")) {
+						break;
+					}
+				}
+			}
+		}
+		
+		return null;
+	}
+	
+	/**
+	 * Get the target address of a function call instruction
+	 */
+	private Address getCallTarget(Instruction instruction) {
+		try {
+			if (instruction.getNumOperands() > 0) {
+				var operandRefs = instruction.getOperandReferences(0);
+				for (var ref : operandRefs) {
+					if (ref.isMemoryReference() && ref.getReferenceType().isCall()) {
+						return ref.getToAddress();
+					}
+				}
+			}
+		} catch (Exception e) {
+			// Ignore errors in operand analysis
+		}
+		return null;
+	}
+	
+	/**
+	 * Heuristic to determine if a function is likely the main function
+	 */
+	private boolean isLikelyMainFunction(Address addr, int callDepth) {
+		try {
+			var functionManager = mProgram.getFunctionManager();
+			var function = functionManager.getFunctionAt(addr);
+			
+			if (function == null) {
+				Msg.info(getClass(), "No function found at " + addr);
+				return false;
+			}
+			
+			// Heuristics for main function:
+			// 1. Called after some startup functions (depth > 0)
+			// 2. Has reasonable size (not a tiny utility function)
+			// 3. Not in ROM/system library area
+			// 4. Makes calls to other functions (application logic)
+			
+			long functionSize = function.getBody().getNumAddresses();
+			boolean hasAppCalls = hasApplicationCalls(function);
+			boolean hasMainStructure = hasMainLikeStructure(function);
+			
+			Msg.info(getClass(), "Analyzing function at " + addr + ": size=" + functionSize + 
+					", depth=" + callDepth + ", hasAppCalls=" + hasAppCalls + ", hasMainStructure=" + hasMainStructure);
+			
+			// Main should be reasonably sized
+			if (functionSize < 20) {
+				Msg.info(getClass(), "Function too small for main (" + functionSize + " < 20)");
+				return false;
+			}
+			
+			// Main can be called relatively early, so allow depth 0 for larger functions
+			if (callDepth == 0 && functionSize < 100) {
+				Msg.info(getClass(), "Small function called directly from reset, unlikely to be main");
+				return false;
+			}
+			
+			// Check if function makes calls (application functions typically do)
+			if (hasAppCalls) {
+				// Additional check: main often has loops or doesn't return
+				if (hasMainStructure) {
+					Msg.info(getClass(), "Function has main-like structure!");
+					return true;
+				}
+				
+				// If it's a reasonable size and makes calls, it's a good candidate
+				if (functionSize > 50) {
+					Msg.info(getClass(), "Function is large and makes calls, likely main!");
+					return true;
+				}
+			} else {
+				Msg.info(getClass(), "Function doesn't make enough application calls");
+			}
+			
+			// Special case: Very large functions with structure might be main even without many calls
+			if (functionSize > 100 && hasMainStructure) {
+				Msg.info(getClass(), "Large function with main-like structure, likely main!");
+				return true;
+			}
+			
+		} catch (Exception e) {
+			Msg.debug(getClass(), "Error analyzing function for main heuristic: " + e.getMessage());
+		}
+		
+		return false;
+	}
+	
+	/**
+	 * Check if a function makes calls to other application functions
+	 */
+	private boolean hasApplicationCalls(ghidra.program.model.listing.Function function) {
+		try {
+			Listing listing = mProgram.getListing();
+			var body = function.getBody();
+			
+			int callCount = 0;
+			var addresses = body.getAddresses(true);
+			
+			while (addresses.hasNext() && callCount < 10) { // Limit check for performance
+				Address addr = addresses.next();
+				Instruction inst = listing.getInstructionAt(addr);
+				
+				if (inst != null) {
+					String mnemonic = inst.getMnemonicString().toLowerCase();
+					if (mnemonic.equals("bl") || mnemonic.equals("blx")) {
+						callCount++;
+					}
+				}
+			}
+			
+			// Main typically makes multiple function calls
+			return callCount >= 2;
+			
+		} catch (Exception e) {
+			return false;
+		}
+	}
+	
+	/**
+	 * Check if function has main-like structure (loops, doesn't return easily)
+	 */
+	private boolean hasMainLikeStructure(ghidra.program.model.listing.Function function) {
+		try {
+			Listing listing = mProgram.getListing();
+			var body = function.getBody();
+			var addresses = body.getAddresses(true);
+			
+			boolean hasLoop = false;
+			boolean hasConditionalBranch = false;
+			
+			while (addresses.hasNext()) {
+				Address addr = addresses.next();
+				Instruction inst = listing.getInstructionAt(addr);
+				
+				if (inst != null) {
+					String mnemonic = inst.getMnemonicString().toLowerCase();
+					
+					// Look for branch instructions that could indicate loops
+					if (mnemonic.startsWith("b") && !mnemonic.equals("bl") && !mnemonic.equals("blx")) {
+						Address target = getCallTarget(inst);
+						if (target != null && target.compareTo(addr) <= 0) {
+							hasLoop = true; // Backward branch indicates loop
+						}
+						if (mnemonic.startsWith("b") && !mnemonic.equals("b")) {
+							hasConditionalBranch = true; // Conditional branch
+						}
+					}
+				}
+			}
+			
+			// Main often has loops and conditional logic
+			return hasLoop || hasConditionalBranch;
+			
+		} catch (Exception e) {
+			return false;
+		}
+	}
+	
+	/**
+	 * Check if a function looks like startup/initialization code
+	 */
+	private boolean isStartupFunction(Address addr) {
+		try {
+			var functionManager = mProgram.getFunctionManager();
+			var function = functionManager.getFunctionAt(addr);
+			
+			if (function == null) {
+				return false;
+			}
+			
+			// Startup functions are typically:
+			// 1. Relatively small
+			// 2. Make few calls
+			// 3. Located in lower memory addresses (near reset vector)
+			
+			long functionSize = function.getBody().getNumAddresses();
+			long functionAddr = addr.getOffset();
+			
+			// Startup code is usually in the first 64KB of memory
+			return functionSize < 100 && functionAddr < 0x10000;
+			
+		} catch (Exception e) {
+			return false;
+		}
+	}
+	
+	/**
+	 * Mark the identified main function with a comment
+	 */
+	private void markMainFunction(Address mainAddr) {
+		try {
+			Listing listing = mProgram.getListing();
+			
+			// Add a single-line end-of-line comment like the SVD comments
+			String comment = "SVD: Main entry point - Application start (auto-identified from reset vector analysis)";
+			
+			int transactionId = mProgram.startTransaction("SVD main function identification");
+			boolean ok = false;
+			try {
+				listing.setComment(mainAddr, CodeUnit.EOL_COMMENT, comment);
+				ok = true;
+			} catch (Exception e) {
+				Msg.error(getClass(), "Error adding main function comment: " + e.getMessage());
+			}
+			mProgram.endTransaction(transactionId, ok);
+			
+		} catch (Exception e) {
+			Msg.error(getClass(), "Error marking main function: " + e.getMessage());
 		}
 	}
 	
