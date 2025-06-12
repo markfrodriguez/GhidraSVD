@@ -2132,7 +2132,7 @@ public class SvdLoadTask extends Task {
 	 */
 	private void identifyMainEntryPoint() {
 		try {
-			Msg.warn(getClass(), "MAIN DETECTION: Starting main function identification...");
+			// Starting main function identification
 			
 			// Find reset vector from vector table
 			Address resetHandlerAddr = findResetHandlerFromVectorTable();
@@ -2141,13 +2141,13 @@ public class SvdLoadTask extends Task {
 				return;
 			}
 			
-			Msg.warn(getClass(), "MAIN DETECTION: Found reset handler at: " + resetHandlerAddr);
+			// Found reset handler
 			
 			// Follow startup code to find main function
 			Address mainAddr = findMainFromStartupFlow(resetHandlerAddr);
 			if (mainAddr != null) {
 				markMainFunction(mainAddr);
-				Msg.warn(getClass(), "MAIN DETECTION: Successfully identified main function at: " + mainAddr);
+				// Main function identified at: " + mainAddr
 			} else {
 				Msg.warn(getClass(), "Could not identify main function from startup flow");
 			}
@@ -2167,29 +2167,29 @@ public class SvdLoadTask extends Task {
 			AddressSpace addrSpace = mProgram.getAddressFactory().getDefaultAddressSpace();
 			Address vectorTableBase = mMemory.getMinAddress();
 			
-			Msg.warn(getClass(), "MAIN DETECTION: Vector table base: " + vectorTableBase);
+			// Vector table analysis
 			
 			// Reset vector is at offset 0x4 in the vector table
 			Address resetVectorAddr = vectorTableBase.add(4);
 			
-			Msg.info(getClass(), "Reading reset vector from: " + resetVectorAddr);
+			// Reading reset vector from: " + resetVectorAddr
 			
 			// Read the reset handler address
 			int resetHandlerValue = mMemory.getInt(resetVectorAddr);
 			
-			Msg.warn(getClass(), "MAIN DETECTION: Raw reset handler value: 0x" + Integer.toHexString(resetHandlerValue).toUpperCase());
+			// Reset handler value extracted
 			
 			// ARM Cortex-M uses Thumb mode, so clear the LSB
 			long resetHandlerAddr = resetHandlerValue & 0xFFFFFFFEL;
 			
 			Address resetHandler = addrSpace.getAddress(resetHandlerAddr);
 			
-			Msg.info(getClass(), "Computed reset handler address: " + resetHandler);
+			// Computed reset handler address: " + resetHandler
 			
 			// Verify this address points to valid code
 			MemoryBlock block = mMemory.getBlock(resetHandler);
 			if (block != null) {
-				Msg.info(getClass(), "Reset handler is in valid memory block: " + block.getName());
+				// Reset handler is in valid memory block: " + block.getName()
 				return resetHandler;
 			} else {
 				Msg.warn(getClass(), "Reset handler address is not in a valid memory block");
@@ -2214,7 +2214,7 @@ public class SvdLoadTask extends Task {
 			return analyzeStartupFunction(startupAddr, listing, visitedAddresses, 0);
 			
 		} catch (Exception e) {
-			Msg.debug(getClass(), "Error analyzing startup flow: " + e.getMessage());
+			// Error analyzing startup flow
 			return null;
 		}
 	}
@@ -2240,23 +2240,23 @@ public class SvdLoadTask extends Task {
 			if (mnemonic.equals("bl") || mnemonic.equals("blx")) {
 				Address target = getCallTarget(current);
 				if (target != null) {
-					Msg.info(getClass(), "Found function call at depth " + depth + " to: " + target);
+					// Found function call
 					
 					// Check if this could be main based on heuristics
 					if (isLikelyMainFunction(target, depth)) {
-						Msg.info(getClass(), "Function at " + target + " identified as main function!");
+						// Function identified as main
 						return target;
 					}
 					
 					// If not main, but looks like startup code, recurse
 					if (isStartupFunction(target) && depth < 3) {
-						Msg.info(getClass(), "Function at " + target + " looks like startup code, recursing...");
+						// Function looks like startup code, recursing
 						Address mainFromRecursion = analyzeStartupFunction(target, listing, visited, depth + 1);
 						if (mainFromRecursion != null) {
 							return mainFromRecursion;
 						}
 					} else {
-						Msg.info(getClass(), "Function at " + target + " does not look like startup code (depth=" + depth + ")");
+						// Function at " + target + " does not look like startup code (depth=" + depth + ")"
 					}
 				}
 			}
@@ -2307,7 +2307,7 @@ public class SvdLoadTask extends Task {
 			var function = functionManager.getFunctionAt(addr);
 			
 			if (function == null) {
-				Msg.info(getClass(), "No function found at " + addr);
+				// No function found at " + addr
 				return false;
 			}
 			
@@ -2321,18 +2321,17 @@ public class SvdLoadTask extends Task {
 			boolean hasAppCalls = hasApplicationCalls(function);
 			boolean hasMainStructure = hasMainLikeStructure(function);
 			
-			Msg.info(getClass(), "Analyzing function at " + addr + ": size=" + functionSize + 
-					", depth=" + callDepth + ", hasAppCalls=" + hasAppCalls + ", hasMainStructure=" + hasMainStructure);
+			// Analyzing function at " + addr + ": size=" + functionSize + ", depth=" + callDepth + ", hasAppCalls=" + hasAppCalls + ", hasMainStructure=" + hasMainStructure
 			
 			// Main should be reasonably sized
 			if (functionSize < 20) {
-				Msg.info(getClass(), "Function too small for main (" + functionSize + " < 20)");
+				// Function too small for main
 				return false;
 			}
 			
 			// Main can be called relatively early, so allow depth 0 for larger functions
 			if (callDepth == 0 && functionSize < 100) {
-				Msg.info(getClass(), "Small function called directly from reset, unlikely to be main");
+				// Small function called directly from reset, unlikely to be main
 				return false;
 			}
 			
@@ -2340,13 +2339,13 @@ public class SvdLoadTask extends Task {
 			if (hasAppCalls) {
 				// Additional check: main often has loops or doesn't return
 				if (hasMainStructure) {
-					Msg.info(getClass(), "Function has main-like structure!");
+					// Function has main-like structure
 					return true;
 				}
 				
 				// If it's a reasonable size and makes calls, it's a good candidate
 				if (functionSize > 50) {
-					Msg.info(getClass(), "Function is large and makes calls, likely main!");
+					// Function is large and makes calls, likely main
 					return true;
 				}
 			} else {
@@ -2355,12 +2354,12 @@ public class SvdLoadTask extends Task {
 			
 			// Special case: Very large functions with structure might be main even without many calls
 			if (functionSize > 100 && hasMainStructure) {
-				Msg.info(getClass(), "Large function with main-like structure, likely main!");
+				// Large function with main-like structure, likely main
 				return true;
 			}
 			
 		} catch (Exception e) {
-			Msg.debug(getClass(), "Error analyzing function for main heuristic: " + e.getMessage());
+			// Error analyzing function for main heuristic
 		}
 		
 		return false;
